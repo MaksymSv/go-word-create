@@ -8,11 +8,13 @@ import (
 )
 
 type Config struct {
-	JiraURL      string
-	JiraUsername string
-	JiraAPIToken string
-	BoardName    string
-	OutputFile   string
+	JiraURL       string
+	JiraUsername  string
+	JiraAPIToken  string
+	BoardName     string
+	OutputFile    string
+	JiraEpicField string
+	JiraSPField   string
 }
 
 // Load reads the configuration from environment variables
@@ -38,11 +40,13 @@ func Load() (*Config, error) {
 	}
 
 	config := &Config{
-		JiraURL:      os.Getenv("JIRA_URL"),
-		JiraUsername: os.Getenv("JIRA_USERNAME"),
-		JiraAPIToken: os.Getenv("JIRA_API_TOKEN"),
-		BoardName:    os.Getenv("JIRA_BOARD_NAME"),
-		OutputFile:   getEnvWithDefault("DEFAULT_OUTPUT_FILE", "sprint-issues.docx"),
+		JiraURL:       os.Getenv("JIRA_URL"),
+		JiraUsername:  os.Getenv("JIRA_USERNAME"),
+		JiraAPIToken:  os.Getenv("JIRA_API_TOKEN"),
+		BoardName:     os.Getenv("JIRA_BOARD_NAME"),
+		OutputFile:    getEnvWithDefault("DEFAULT_OUTPUT_FILE", "sprint-issues.docx"),
+		JiraEpicField: getEnvWithDefault("JIRA_EPIC_FIELD", "customfield_14500"),
+		JiraSPField:   getEnvWithDefault("JIRA_SP_FIELD", "customfield_10004"),
 	}
 
 	return config, nil

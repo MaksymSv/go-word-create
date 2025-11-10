@@ -34,7 +34,7 @@ func main() {
 	}
 
 	// Create Jira service
-	jiraService, err := jiraservice.NewJiraService(cfg.JiraURL, cfg.JiraUsername, cfg.JiraAPIToken)
+	jiraService, err := jiraservice.NewJiraService(cfg.JiraURL, cfg.JiraUsername, cfg.JiraAPIToken, cfg.JiraEpicField, cfg.JiraSPField)
 	if err != nil {
 		log.Fatalf("Failed to create Jira service: %v", err)
 	}

@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"net/http"
+	"strconv"
 
 	"go-word-create/internal/wordtable"
 
@@ -51,7 +52,7 @@ func (h *Handler) GetDocument(w http.ResponseWriter, r *http.Request) {
 	// Set headers for file download
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 	w.Header().Set("Content-Disposition", `attachment; filename="report.docx"`)
-	w.Header().Set("Content-Length", string(buf.Len()))
+	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
 
 	// Write the document to the response
 	_, err = w.Write(buf.Bytes())
