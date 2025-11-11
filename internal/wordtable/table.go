@@ -51,8 +51,7 @@ func (t *Table) AddDataRow(data []string) {
 		cell := dataRow.AddCell()
 		setCellMargins(cell)
 		para := cell.AddParagraph()
-		// Center align for "id" (column 1) and "SP" (column 4) columns
-		if i == 1 || i == 4 {
+		if i != 3 && i != 4 {
 			para.Properties().SetAlignment(wml.ST_JcCenter)
 		}
 		para.AddRun().AddText(val)

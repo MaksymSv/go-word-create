@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -12,6 +13,7 @@ type JiraService struct {
 	client    *jira.Client
 	epicField string
 	spField   string
+	url       string
 }
 
 type Issue struct {
@@ -19,6 +21,9 @@ type Issue struct {
 	Summary     string
 	Epic        string
 	StoryPoints float64
+	Type        string
+	Status      string
+	URL         string
 }
 
 func NewJiraService(baseURL, username, password, epicField, spField string) (*JiraService, error) {
@@ -32,10 +37,15 @@ func NewJiraService(baseURL, username, password, epicField, spField string) (*Ji
 		return nil, fmt.Errorf("failed to create Jira client: %w", err)
 	}
 
-	return &JiraService{client: client, epicField: epicField, spField: spField}, nil
+	return &JiraService{
+		client:    client,
+		epicField: epicField,
+		spField:   spField,
+		url:       baseURL,
+	}, nil
 }
 
-func (s *JiraService) GetSprintIssues(boardName, sprintName string) ([]Issue, error) {
+func (s *JiraService) GetSprintIssues(boardName, sprintName string, issuesTypes []string) ([]Issue, error) {
 	// First, find the board ID
 	boards, _, err := s.client.Board.GetAllBoards(&jira.BoardListOptions{
 		ProjectKeyOrID: "",
@@ -114,6 +124,17 @@ func (s *JiraService) GetSprintIssues(boardName, sprintName string) ([]Issue, er
 	}
 
 	// Build result using epic name lookup
+	// Prepare a filter map from issuesTypes (if provided) for O(1) checks
+	typeFilter := make(map[string]struct{})
+	if len(issuesTypes) > 0 {
+		for _, t := range issuesTypes {
+			key := strings.ToLower(strings.TrimSpace(t))
+			if key != "" {
+				typeFilter[key] = struct{}{}
+			}
+		}
+	}
+
 	var result []Issue
 	for _, issue := range issues {
 		epicName := ""
@@ -168,11 +189,25 @@ func (s *JiraService) GetSprintIssues(boardName, sprintName string) ([]Issue, er
 			}
 		}
 
+		// Determine issue type string
+		issueType := issue.Fields.Type.Name
+
+		// If a filter was provided, only include matching types (case-insensitive)
+		if len(typeFilter) > 0 {
+			if _, ok := typeFilter[strings.ToLower(strings.TrimSpace(issueType))]; !ok {
+				// skip this issue because its type is not in the filter list
+				continue
+			}
+		}
+
 		result = append(result, Issue{
 			Key:         issue.Key,
 			Summary:     issue.Fields.Summary,
 			Epic:        epicName,
 			StoryPoints: storyPoints,
+			Type:        issueType,
+			Status:      issue.Fields.Status.Name,
+			URL:         fmt.Sprintf("%s/browse/%s", s.url, issue.Key),
 		})
 	}
 

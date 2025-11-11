@@ -49,7 +49,7 @@ func main() {
 	}
 
 	// Get issues from sprint
-	issues, err := jiraService.GetSprintIssues(cfg.BoardName, *sprintName)
+	issues, err := jiraService.GetSprintIssues(cfg.BoardName, *sprintName, []string{"Bug", "Feature", "Task"})
 	if err != nil {
 		log.Fatalf("Failed to get sprint issues: %v", err)
 	}
@@ -60,7 +60,8 @@ func main() {
 		fmt.Println("\nIssues:")
 		for _, issue := range issues {
 			// Truncate strings that are too long
-			fmt.Printf("%-12s|%-80s|%-40s|%.1f\n", issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints)
+			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f\n",
+				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints)
 		}
 		fmt.Printf("\nTotal issues: %d\n", len(issues))
 	} else {
@@ -69,12 +70,13 @@ func main() {
 		table := wordtable.NewTable(doc)
 
 		// Add header row
-		headers := []string{"Key", "Summary", "Epic", "Story Points"}
+		headers := []string{"Type", "Key", "Summary", "Epic", "Story Points"}
 		table.AddHeaderRow(headers)
 
 		// Add issue rows
 		for _, issue := range issues {
 			data := []string{
+				issue.Type,
 				issue.Key,
 				issue.Summary,
 				issue.Epic,
