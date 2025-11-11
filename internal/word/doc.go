@@ -12,6 +12,14 @@ type Doc struct {
 	WordDocument document.Document
 }
 
+// AddHeading adds a heading to the document
+func (d *Doc) AddHeading(headingLevel int, headingText string) {
+	d.WordDocument.AddParagraph().AddRun().AddBreak()
+	heading1 := d.WordDocument.AddParagraph()
+	heading1.Properties().SetHeadingLevel(headingLevel)
+	heading1.AddRun().AddText(headingText)
+}
+
 // NewDoc creates a new document with default settings
 func NewDocument() *Doc {
 	wordDocument := document.New()

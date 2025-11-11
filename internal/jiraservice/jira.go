@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -450,4 +451,146 @@ func (s *JiraService) GetSprintIssuesOld(boardName, sprintName string, issuesTyp
 
 	return result, nil
 
+}
+
+// GetIssuesInProgressDuringMonth returns issues that were in 'In Progress' status
+// during the specified month, regardless of their current status.
+// It checks the issue changelog to find when status changed to "In Progress".
+func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey string, monthStart, monthEnd time.Time, issuesTypes []string) ([]Issue, error) {
+	// Format dates for JQL: YYYY-MM-DD
+	startStr := monthStart.Format("2006-01-02")
+
+	// JQL to find issues created or updated during the month in the project
+	// We'll then check their changelog for "In Progress" status changes
+	jql := fmt.Sprintf(`project = "%s" AND (created >= "%s" OR updated >= "%s")`, projectKey, startStr, startStr)
+
+	opts := &jira.SearchOptions{MaxResults: 1000, Expand: "changelog"}
+	jiraIssues, _, err := s.client.Issue.Search(jql, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search issues: %w", err)
+	}
+
+	// Load epics for name resolution
+	epicNames, err := s.LoadEpics(projectKey)
+	if err != nil {
+		log.Printf("warning: failed to load epics: %v", err)
+		epicNames = make(map[string]string)
+	}
+
+	// Create type filter
+	typeFilter := createFilterMap(issuesTypes)
+
+	var result []Issue
+	for _, jiraIssue := range jiraIssues {
+		// Determine issue type
+		issueType := jiraIssue.Fields.Type.Name
+
+		// Apply type filter if provided
+		if len(typeFilter) > 0 {
+			if _, ok := typeFilter[strings.ToLower(strings.TrimSpace(issueType))]; !ok {
+				continue
+			}
+		}
+
+		// Check if this issue was in 'In Progress' status during the target month
+		wasInProgressDuringMonth := false
+		if jiraIssue.Changelog != nil {
+			for _, history := range jiraIssue.Changelog.Histories {
+				// Parse the created timestamp
+				createdTime, err := time.Parse("2006-01-02T15:04:05.000-0700", history.Created)
+				if err != nil {
+					// Try alternate format
+					createdTime, err = time.Parse(time.RFC3339, history.Created)
+					if err != nil {
+						log.Printf("warning: could not parse changelog timestamp %s: %v", history.Created, err)
+						continue
+					}
+				}
+
+				// Check if this change happened during the target month
+				if createdTime.Before(monthEnd) && !createdTime.Before(monthStart) {
+					// Look for status changes to "In Progress"
+					for _, item := range history.Items {
+						if item.Field == "status" && item.ToString == "In Progress" {
+							wasInProgressDuringMonth = true
+							break
+						}
+					}
+				}
+
+				if wasInProgressDuringMonth {
+					break
+				}
+			}
+		}
+
+		// Skip if not in progress during month
+		if !wasInProgressDuringMonth {
+			continue
+		}
+
+		// Resolve epic name
+		epicName := ""
+		if v, ok := jiraIssue.Fields.Unknowns[s.epicField]; ok {
+			switch t := v.(type) {
+			case string:
+				if name, found := epicNames[t]; found {
+					epicName = name
+				} else {
+					epicName = t
+				}
+			case map[string]interface{}:
+				var key string
+				if k, ok := t["key"].(string); ok {
+					key = k
+				} else if v2, ok := t["value"].(string); ok {
+					key = v2
+				}
+				if key != "" {
+					if name, found := epicNames[key]; found {
+						epicName = name
+					} else {
+						epicName = key
+					}
+				}
+			}
+		}
+
+		// Extract story points
+		storyPoints := 0.0
+		if spField, ok := jiraIssue.Fields.Unknowns[s.spField]; ok {
+			switch sp := spField.(type) {
+			case float64:
+				storyPoints = sp
+			case int:
+				storyPoints = float64(sp)
+			case int64:
+				storyPoints = float64(sp)
+			case string:
+				if f, err := strconv.ParseFloat(sp, 64); err == nil {
+					storyPoints = f
+				}
+			case map[string]interface{}:
+				if v, ok := sp["value"].(float64); ok {
+					storyPoints = v
+				} else if sstr, ok := sp["value"].(string); ok {
+					if f, err := strconv.ParseFloat(sstr, 64); err == nil {
+						storyPoints = f
+					}
+				}
+			}
+		}
+
+		result = append(result, Issue{
+			Key:         jiraIssue.Key,
+			Summary:     jiraIssue.Fields.Summary,
+			Epic:        epicName,
+			StoryPoints: storyPoints,
+			Type:        issueType,
+			Status:      jiraIssue.Fields.Status.Name,
+			URL:         fmt.Sprintf("%s/browse/%s", s.url, jiraIssue.Key),
+		})
+	}
+
+	return result, nil
 }

@@ -57,45 +57,55 @@ func main() {
 		log.Fatalf("Failed to create Jira service: %v", err)
 	}
 
-	// Get all issues from board
-	issues, err := jiraService.GetAllBoardIssues(cfg.ProjectKey, cfg.BoardName, []string{"Bug", "Feature", "Task"})
+	// Query issues that were in 'In Progress' state during the specified month
+	// We use JQL with updated date range to find issues modified during the month
+	filtered, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, monthStart, monthEnd, []string{"Bug", "Story", "Task"})
 	if err != nil {
-		log.Fatalf("Failed to get board issues: %v", err)
+		log.Fatalf("Failed to get issues in progress: %v", err)
 	}
 
-	filtered := issues
+	// split issues into two lists: Closed and all others
+	closedIssues := []jiraservice.Issue{}
+	openIssues := []jiraservice.Issue{}
 
-	// Filter issues that were in 'In Progress' state during the specified month
-	// var filtered []jiraservice.Issue
-	// for _, issue := range issues {
-	// 	for _, history := range issue.StatusHistory {
-	// 		if history.Status == "In Progress" && !history.ChangedAt.Before(monthStart) && history.ChangedAt.Before(monthEnd) {
-	// 			filtered = append(filtered, issue)
-	// 			break
-	// 		}
-	// 	}
-	// }
+	for _, issue := range filtered {
+		if issue.Status == "Closed" {
+			closedIssues = append(closedIssues, issue)
+		} else {
+			openIssues = append(openIssues, issue)
+		}
+	}
 
 	if *debugMode {
 		// Print debug information
 		fmt.Printf("Found %d issues in 'In Progress' during %s\n", len(filtered), *month)
-		fmt.Println("\nIssues:")
-		for _, issue := range filtered {
-			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f\n",
-				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints)
+		fmt.Println("\nClosed Issues:")
+		for _, issue := range closedIssues {
+			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%-12s\n",
+				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
 		}
+
+		fmt.Println("\nOpen Issues:")
+		for _, issue := range openIssues {
+			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%-12s\n",
+				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
+		}
+
 		fmt.Printf("\nTotal issues: %d\n", len(filtered))
 	} else {
 		// Create Word document
 		doc := word.NewDocument()
-		table := word.NewTable(&doc.WordDocument)
 
-		// Add header row
+		doc.AddHeading(1, fmt.Sprintf("Issues In Progress During %s", monthStart.Format("January 2006")))
+
+		// Header row
 		headers := []string{"Type", "Key", "Summary", "Epic", "Story Points"}
-		table.AddHeaderRow(headers)
+
+		closedIssuesTable := word.NewTable(&doc.WordDocument)
+		closedIssuesTable.AddHeaderRow(headers)
 
 		// Add issue rows
-		for _, issue := range filtered {
+		for _, issue := range closedIssues {
 			data := []string{
 				issue.Type,
 				issue.Key,
@@ -103,7 +113,22 @@ func main() {
 				issue.Epic,
 				strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
 			}
-			table.AddDataRow(data)
+			closedIssuesTable.AddDataRow(data)
+		}
+
+		openIssuesTable := word.NewTable(&doc.WordDocument)
+		openIssuesTable.AddHeaderRow(headers)
+
+		// Add open issue rows
+		for _, issue := range openIssues {
+			data := []string{
+				issue.Type,
+				issue.Key,
+				issue.Summary,
+				issue.Epic,
+				strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
+			}
+			openIssuesTable.AddDataRow(data)
 		}
 
 		// Save the document
