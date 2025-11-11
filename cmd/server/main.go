@@ -9,6 +9,9 @@ import (
 )
 
 func main() {
+
+	// Stub code. Needs further implementation
+
 	// Create a new handler
 	handler := server.NewHandler()
 
