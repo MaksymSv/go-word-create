@@ -79,56 +79,21 @@ func main() {
 	if *debugMode {
 		// Print debug information
 		fmt.Printf("Found %d issues in 'In Progress' during %s\n", len(filtered), *month)
-		fmt.Println("\nClosed Issues:")
-		for _, issue := range closedIssues {
-			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%-12s\n",
-				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
-		}
 
-		fmt.Println("\nOpen Issues:")
-		for _, issue := range openIssues {
-			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%-12s\n",
-				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
-		}
+		logIssuesTable(fmt.Sprintf("\nClosed Issues (%d):", len(closedIssues)), closedIssues)
+		logIssuesTable(fmt.Sprintf("\nOpen Issues (%d):", len(openIssues)), openIssues)
 
 		fmt.Printf("\nTotal issues: %d\n", len(filtered))
 	} else {
 		// Create Word document
 		doc := word.NewDocument()
 
-		doc.AddHeading(1, fmt.Sprintf("Issues In Progress During %s", monthStart.Format("January 2006")))
+		addTableToDocument(doc, fmt.Sprintf("Closed Issues During %s", monthStart.Format("January 2006")), closedIssues)
+		addTableToDocument(doc, fmt.Sprintf("Issues were in work but not Closed during %s", monthStart.Format("January 2006")), openIssues)
 
-		// Header row
-		headers := []string{"Type", "Key", "Summary", "Epic", "Story Points"}
-
-		closedIssuesTable := word.NewTable(&doc.WordDocument)
-		closedIssuesTable.AddHeaderRow(headers)
-
-		// Add issue rows
-		for _, issue := range closedIssues {
-			data := []string{
-				issue.Type,
-				issue.Key,
-				issue.Summary,
-				issue.Epic,
-				strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
-			}
-			closedIssuesTable.AddDataRow(data)
-		}
-
-		openIssuesTable := word.NewTable(&doc.WordDocument)
-		openIssuesTable.AddHeaderRow(headers)
-
-		// Add open issue rows
-		for _, issue := range openIssues {
-			data := []string{
-				issue.Type,
-				issue.Key,
-				issue.Summary,
-				issue.Epic,
-				strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
-			}
-			openIssuesTable.AddDataRow(data)
+		// output file has format some_file.docx. Insert formatted date "yyyy-mm" before .docx
+		if outputFile != nil {
+			*outputFile = fmt.Sprintf("%s - %s.docx", (*outputFile)[:len(*outputFile)-5], monthStart.Format("2006-01"))
 		}
 
 		// Save the document
@@ -138,5 +103,36 @@ func main() {
 		}
 
 		fmt.Printf("Created document '%s' with %d issues\n", *outputFile, len(filtered))
+	}
+}
+
+func logIssuesTable(header string, lines []jiraservice.Issue) {
+	fmt.Println(header)
+	for _, issue := range lines {
+		fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%-12s\n",
+			issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
+	}
+}
+
+func addTableToDocument(doc *word.Doc, headingText string, tableContent []jiraservice.Issue) {
+
+	// Headers
+	headers := []string{"Type", "ID", "Description", "Epic", "SP"}
+
+	doc.AddHeading(1, headingText)
+
+	closedIssuesTable := word.NewTable(&doc.WordDocument)
+	closedIssuesTable.AddHeaderRow(headers)
+
+	// Add issue rows
+	for _, issue := range tableContent {
+		data := []string{
+			issue.Type,
+			issue.Key,
+			issue.Summary,
+			issue.Epic,
+			strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
+		}
+		closedIssuesTable.AddDataRow(data)
 	}
 }

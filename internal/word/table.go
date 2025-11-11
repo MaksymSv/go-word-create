@@ -33,14 +33,16 @@ func (t *Table) AddHeaderRow(headers []string) {
 		cell.Properties().SetShading(wml.ST_ShdSolid, color.RGB(0x36, 0x5F, 0x91), color.Auto)
 		setCellMargins(cell)
 		para := cell.AddParagraph()
-		// Center align for "id" and "SP" columns
-		if h == "id" || h == "SP" {
-			para.Properties().SetAlignment(wml.ST_JcCenter)
-		}
+		// Center align
+		para.Properties().SetAlignment(wml.ST_JcCenter)
 		run := para.AddRun()
 		run.AddText(h)
+		// Set header font and size
 		run.Properties().SetBold(true)
 		run.Properties().SetColor(color.White) // White text
+		// Attempt to set font family and size for table text
+		run.Properties().SetSize(10)
+		run.Properties().SetFontFamily("Aptos Narrow")
 	}
 }
 
@@ -51,10 +53,14 @@ func (t *Table) AddDataRow(data []string) {
 		cell := dataRow.AddCell()
 		setCellMargins(cell)
 		para := cell.AddParagraph()
-		if i != 3 && i != 4 {
+		if i != 2 && i != 3 {
 			para.Properties().SetAlignment(wml.ST_JcCenter)
 		}
-		para.AddRun().AddText(val)
+		run := para.AddRun()
+		run.AddText(val)
+		// Set table cell font and size
+		run.Properties().SetSize(8)
+		run.Properties().SetFontFamily("Aptos Narrow")
 	}
 }
 
