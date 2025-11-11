@@ -1,4 +1,4 @@
-package wordtable
+package word
 
 import (
 	"github.com/carmel/gooxml/color"

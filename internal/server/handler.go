@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"go-word-create/internal/wordtable"
-
-	"github.com/carmel/gooxml/document"
+	"go-word-create/internal/word"
 )
 
 // Handler handles HTTP requests for document generation
@@ -21,10 +19,10 @@ func NewHandler() *Handler {
 // GetDocument handles the GET request to generate and return a Word document
 func (h *Handler) GetDocument(w http.ResponseWriter, r *http.Request) {
 	// Create a new Word document
-	doc := document.New()
+	doc := word.NewDocument()
 
 	// Create a new table
-	table := wordtable.NewTable(doc)
+	table := word.NewTable(&doc.WordDocument)
 
 	// Add header row
 	headers := []string{"types", "id", "name", "epic", "SP"}
@@ -43,7 +41,7 @@ func (h *Handler) GetDocument(w http.ResponseWriter, r *http.Request) {
 
 	// Create a buffer to store the document
 	var buf bytes.Buffer
-	err := doc.Save(&buf)
+	err := doc.WordDocument.Save(&buf)
 	if err != nil {
 		http.Error(w, "Error generating document", http.StatusInternalServerError)
 		return

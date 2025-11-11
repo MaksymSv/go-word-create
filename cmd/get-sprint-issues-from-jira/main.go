@@ -9,9 +9,7 @@ import (
 
 	"go-word-create/internal/config"
 	"go-word-create/internal/jiraservice"
-	"go-word-create/internal/wordtable"
-
-	"github.com/carmel/gooxml/document"
+	"go-word-create/internal/word"
 )
 
 // truncate cuts a string if it's longer than maxLen and adds "..." at the end
@@ -66,8 +64,8 @@ func main() {
 		fmt.Printf("\nTotal issues: %d\n", len(issues))
 	} else {
 		// Create Word document
-		doc := document.New()
-		table := wordtable.NewTable(doc)
+		doc := word.NewDocument()
+		table := word.NewTable(&doc.WordDocument)
 
 		// Add header row
 		headers := []string{"Type", "Key", "Summary", "Epic", "Story Points"}
@@ -86,7 +84,7 @@ func main() {
 		}
 
 		// Save the document
-		err = doc.SaveToFile(*outputFile)
+		err = doc.SaveDocumentToFile(outputFile)
 		if err != nil {
 			log.Fatalf("Failed to save document: %v", err)
 		}
