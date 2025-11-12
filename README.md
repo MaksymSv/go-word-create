@@ -157,8 +157,8 @@ go-word-create/
 ├── internal/
 │   ├── config/              # Configuration loading from .env
 │   ├── jiraservice/         # Jira API client and issue fetching
-│   ├── word/                # Word document generation
-│   └── wordtable/           # Table formatting utilities
+│   ├── server/              # HTTP handler
+│   └── word/                # Word document generation, table formatting utilities
 ├── go.mod                   # Go module definition
 ├── .env.example             # Example environment variables
 ├── Makefile                 # Build automation
