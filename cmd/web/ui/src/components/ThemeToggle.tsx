@@ -2,12 +2,12 @@ import React from 'react'
 import { useTheme } from '../context/ThemeContext'
 
 export const ThemeToggle: React.FC = () => {
-  const { theme } = useTheme()
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <button
       className="hero-btn hero-btn-ghost"
-      onClick={() => useTheme().toggleTheme()}
+      onClick={toggleTheme}
       aria-label="Toggle theme"
     >
       {theme === 'dark' ? (
