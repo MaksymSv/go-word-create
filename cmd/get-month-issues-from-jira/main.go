@@ -21,6 +21,12 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen-3] + "..."
 }
 
+// TeamIssues groups closed and open issues for a specific team/component.
+type TeamIssues struct {
+	Closed []jiraservice.Issue
+	Open   []jiraservice.Issue
+}
+
 func main() {
 	// Load configuration from .env file
 	cfg, err := config.Load()
@@ -57,39 +63,65 @@ func main() {
 		log.Fatalf("Failed to create Jira service: %v", err)
 	}
 
-	// Query issues that were in 'In Progress' state during the specified month
-	// We use JQL with updated date range to find issues modified during the month
-	filtered, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, monthStart, monthEnd, []string{"Bug", "Story", "Task"})
-	if err != nil {
-		log.Fatalf("Failed to get issues in progress: %v", err)
-	}
+	// For each team (component) configured in TEAMS, fetch and split issues.
+	teamIssues := make(map[string]TeamIssues)
+	totalIssuesCount := 0
 
-	// split issues into two lists: Closed and all others
-	closedIssues := []jiraservice.Issue{}
-	openIssues := []jiraservice.Issue{}
+	for _, team := range cfg.Teams {
+		log.Printf("Fetching issues for team/component '%s'", team)
 
-	for _, issue := range filtered {
-		if issue.Status == "Closed" {
-			closedIssues = append(closedIssues, issue)
-		} else {
-			openIssues = append(openIssues, issue)
+		issuesForTeam, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, team, monthStart, monthEnd, []string{"Bug", "Story", "Task"})
+		if err != nil {
+			log.Fatalf("Failed to get issues in progress for team '%s': %v", team, err)
+		}
+
+		totalIssuesCount += len(issuesForTeam)
+
+		var closedForTeam []jiraservice.Issue
+		var openForTeam []jiraservice.Issue
+
+		for _, issue := range issuesForTeam {
+			if issue.Status == "Closed" {
+				closedForTeam = append(closedForTeam, issue)
+			} else {
+				openForTeam = append(openForTeam, issue)
+			}
+		}
+
+		teamIssues[team] = TeamIssues{
+			Closed: closedForTeam,
+			Open:   openForTeam,
 		}
 	}
 
 	if *debugMode {
-		// Print debug information
-		fmt.Printf("Found %d issues in 'In Progress' during %s\n", len(filtered), *month)
+		// Print debug information grouped by team
+		log.Printf("Found %d issues in 'In Progress' during %s across %d teams\n", totalIssuesCount, *month, len(cfg.Teams))
 
-		logIssuesTable(fmt.Sprintf("\nClosed Issues (%d):", len(closedIssues)), closedIssues)
-		logIssuesTable(fmt.Sprintf("\nOpen Issues (%d):", len(openIssues)), openIssues)
+		for _, team := range cfg.Teams {
+			ti, ok := teamIssues[team]
+			if !ok {
+				continue
+			}
 
-		fmt.Printf("\nTotal issues: %d\n", len(filtered))
+			logIssuesTable(fmt.Sprintf("\nClosed Issues for team %s (%d):", team, len(ti.Closed)), ti.Closed)
+			logIssuesTable(fmt.Sprintf("\nOpen Issues for team %s (%d):", team, len(ti.Open)), ti.Open)
+		}
+
+		log.Printf("\nTotal issues across all teams: %d\n", totalIssuesCount)
 	} else {
-		// Create Word document
+		// Create Word document, grouped by team
 		doc := word.NewDocument()
 
-		addTableToDocument(doc, fmt.Sprintf("Closed Issues During %s", monthStart.Format("January 2006")), closedIssues)
-		addTableToDocument(doc, fmt.Sprintf("Issues were in work but not Closed during %s", monthStart.Format("January 2006")), openIssues)
+		for _, team := range cfg.Teams {
+			ti, ok := teamIssues[team]
+			if !ok {
+				continue
+			}
+
+			addTableToDocument(doc, fmt.Sprintf("Closed Issues During %s (%s)", monthStart.Format("January 2006"), team), ti.Closed)
+			addTableToDocument(doc, fmt.Sprintf("Issues were in work but not Closed during %s (%s)", monthStart.Format("January 2006"), team), ti.Open)
+		}
 
 		// output file has format some_file.docx. Insert formatted date "yyyy-mm" before .docx
 		if outputFile != nil {
@@ -102,7 +134,7 @@ func main() {
 			log.Fatalf("Failed to save document: %v", err)
 		}
 
-		fmt.Printf("Created document '%s' with %d issues\n", *outputFile, len(filtered))
+		log.Printf("Created document '%s' with %d issues across %d teams\n", *outputFile, totalIssuesCount, len(cfg.Teams))
 	}
 }
 
