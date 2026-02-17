@@ -20,7 +20,7 @@ help:
 	@echo "  make build-web          - Build web server binary"
 	@echo "  make run                - Run the server"
 	@echo "  make run-web            - Build UI and run web server"
-	@echo "  make run-month MONTH=2025.10 - Run month issues with date parameter"
+	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
 	@echo "  make dev-ui             - Start React dev server"
 	@echo "  make clean              - Remove build artifacts"
 	@echo "  make test               - Run tests"
@@ -80,7 +80,7 @@ run-month: build-month
 		echo "Usage: make run-month MONTH=2025.10"; \
 		exit 1; \
 	fi
-	$(OUTPUT_DIR)/get-month-issues -month="$(MONTH)" -debug
+	$(OUTPUT_DIR)/get-month-issues -month="$(MONTH)"$(if $(LOGONLY), -debug)
 
 # Clean build artifacts
 clean:
