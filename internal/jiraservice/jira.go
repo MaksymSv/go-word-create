@@ -319,8 +319,6 @@ func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey, component strin
 	// Create type filter
 	typeFilter := createFilterMap(issuesTypes)
 
-	log.Printf("Found %d unfiltered issues with component '%s' during month %s\n", len(jiraIssues), component, monthStart.Format("January 2006"))
-
 	var result []Issue
 	for _, jiraIssue := range jiraIssues {
 		// Determine issue type

@@ -96,7 +96,7 @@ func main() {
 
 	if *debugMode {
 		// Print debug information grouped by team
-		fmt.Printf("Found %d issues in 'In Progress' during %s across %d teams\n", totalIssuesCount, *month, len(cfg.Teams))
+		log.Printf("Found %d issues in 'In Progress' during %s across %d teams\n", totalIssuesCount, *month, len(cfg.Teams))
 
 		for _, team := range cfg.Teams {
 			ti, ok := teamIssues[team]
@@ -108,7 +108,7 @@ func main() {
 			logIssuesTable(fmt.Sprintf("\nOpen Issues for team %s (%d):", team, len(ti.Open)), ti.Open)
 		}
 
-		fmt.Printf("\nTotal issues across all teams: %d\n", totalIssuesCount)
+		log.Printf("\nTotal issues across all teams: %d\n", totalIssuesCount)
 	} else {
 		// Create Word document, grouped by team
 		doc := word.NewDocument()
@@ -134,7 +134,7 @@ func main() {
 			log.Fatalf("Failed to save document: %v", err)
 		}
 
-		fmt.Printf("Created document '%s' with %d issues across %d teams\n", *outputFile, totalIssuesCount, len(cfg.Teams))
+		log.Printf("Created document '%s' with %d issues across %d teams\n", *outputFile, totalIssuesCount, len(cfg.Teams))
 	}
 }
 
