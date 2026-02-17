@@ -294,7 +294,8 @@ func createFilterMap(issuesTypes []string) map[string]struct{} {
 // GetIssuesInProgressDuringMonth returns issues that were in 'In Progress' status
 // during the specified month, regardless of their current status.
 // It checks the issue changelog to find when status changed to "In Progress".
-func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey string, monthStart, monthEnd time.Time, issuesTypes []string) ([]Issue, error) {
+// If component is non-empty, only issues whose Components contain that component name are returned.
+func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey, component string, monthStart, monthEnd time.Time, issuesTypes []string) ([]Issue, error) {
 	// Format dates for JQL: YYYY-MM-DD
 	startStr := monthStart.Format("2006-01-02")
 
@@ -318,6 +319,8 @@ func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey string, monthSta
 	// Create type filter
 	typeFilter := createFilterMap(issuesTypes)
 
+	log.Printf("Found %d unfiltered issues with component '%s' during month %s\n", len(jiraIssues), component, monthStart.Format("January 2006"))
+
 	var result []Issue
 	for _, jiraIssue := range jiraIssues {
 		// Determine issue type
@@ -326,6 +329,20 @@ func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey string, monthSta
 		// Apply type filter if provided
 		if len(typeFilter) > 0 {
 			if _, ok := typeFilter[strings.ToLower(strings.TrimSpace(issueType))]; !ok {
+				continue
+			}
+		}
+
+		// If a component is provided, filter by Jira Components containing that component name
+		if component != "" {
+			hasComponent := false
+			for _, c := range jiraIssue.Fields.Components {
+				if c != nil && strings.EqualFold(strings.TrimSpace(c.Name), strings.TrimSpace(component)) {
+					hasComponent = true
+					break
+				}
+			}
+			if !hasComponent {
 				continue
 			}
 		}

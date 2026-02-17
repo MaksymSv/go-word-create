@@ -59,7 +59,9 @@ func main() {
 
 	// Query issues that were in 'In Progress' state during the specified month
 	// We use JQL with updated date range to find issues modified during the month
-	filtered, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, monthStart, monthEnd, []string{"Bug", "Story", "Task"})
+	// component parameter is currently passed as empty string (no component filtering).
+	// It can be wired to TEAMS or a CLI flag in the future if needed.
+	filtered, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, cfg.Teams[0], monthStart, monthEnd, []string{"Bug", "Story", "Task"})
 	if err != nil {
 		log.Fatalf("Failed to get issues in progress: %v", err)
 	}
