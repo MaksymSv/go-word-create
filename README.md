@@ -52,6 +52,8 @@ JIRA_BOARD_NAME=Your Board Name
 JIRA_PROJECT_KEY=PROJ
 JIRA_EPIC_FIELD=customfield_10014
 JIRA_SP_FIELD=customfield_10015
+JIRA_COMPONENT_FIELD=components
+TEAMS=PROCESSING,STABLETEK
 OUTPUT_FILE=output.docx
 ```
 
@@ -197,12 +199,21 @@ make clean
 
 ### Jira Custom Fields
 
-The project uses two custom Jira fields:
+The project uses these Jira fields, which can be configured via `.env`:
 
-1. **Epic Link** (default: `customfield_10014`): Links issues to epics
-2. **Story Points** (default: `customfield_10015`): Stores story point estimates
+1. **Epic Link** (`JIRA_EPIC_FIELD`, default: `customfield_10014`): Links issues to epics
+2. **Story Points** (`JIRA_SP_FIELD`, default: `customfield_10015`): Stores story point estimates
+3. **Components** (`JIRA_COMPONENT_FIELD`, default: `components`): Jira components field name or custom field ID
 
-These IDs may vary in your Jira instance. Use the API endpoint mentioned above to find the correct IDs.
+These IDs/names may vary in your Jira instance. Use the API endpoint mentioned above to find the correct values.
+
+### Teams configuration
+
+The `TEAMS` environment variable configures which teams are used by the application:
+
+- **TEAMS** (default: `PROCESSING,STABLETEK`): A comma-separated list of team names.  
+
+In code this is available as a Go slice `cfg.Teams` (e.g., `[]string{"PROCESSING", "STABLETEK"}` by default).
 
 ### Output File Format
 
