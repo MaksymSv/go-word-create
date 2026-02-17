@@ -333,20 +333,6 @@ func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey, component strin
 			}
 		}
 
-		// If a component is provided, filter by Jira Components containing that component name
-		if component != "" {
-			hasComponent := false
-			for _, c := range jiraIssue.Fields.Components {
-				if c != nil && strings.EqualFold(strings.TrimSpace(c.Name), strings.TrimSpace(component)) {
-					hasComponent = true
-					break
-				}
-			}
-			if !hasComponent {
-				continue
-			}
-		}
-
 		// Check if this issue was in 'In Progress' status during the target month
 		wasInProgressDuringMonth := false
 		if jiraIssue.Changelog != nil {
@@ -382,6 +368,20 @@ func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey, component strin
 		// Skip if not in progress during month
 		if !wasInProgressDuringMonth {
 			continue
+		}
+
+		// If a component is provided, filter by Jira Components containing that component name
+		if component != "" {
+			hasComponent := false
+			for _, c := range jiraIssue.Fields.Components {
+				if c != nil && strings.EqualFold(strings.TrimSpace(c.Name), strings.TrimSpace(component)) {
+					hasComponent = true
+					break
+				}
+			}
+			if !hasComponent {
+				continue
+			}
 		}
 
 		// Resolve epic name
