@@ -1,6 +1,6 @@
 # Go Word Create
 
-A Go project that generates Word documents from Jira issues. Supports fetching issues by sprint or by month, with filtering by issue type.
+A Go project that generates Word documents from Jira issues. Supports fetching issues by sprint or by month, with filtering by issue type and team/component.
 
 ## Project Overview
 
@@ -8,13 +8,15 @@ This project provides multiple command-line tools to fetch Jira issues and gener
 
 - **Server**: HTTP server for generating Word documents on demand
 - **Get Sprint Issues**: Fetch all issues from a specific sprint and export to Word
-- **Get Month Issues**: Fetch all issues that were "In Progress" during a specific month and export to Word
+- **Get Month Issues**: Fetch all issues that were "In Progress" during a specific month, grouped by team/component, and export to Word
 
 ## Features
 
 - 📊 **Jira Integration**: Connect to Jira Cloud to fetch issues, sprints, and epic information
 - 📄 **Word Document Generation**: Create formatted Word documents with tables containing issue details
 - 🔍 **Issue Filtering**: Filter by issue type (Bug, Feature, Task, etc.)
+- 👥 **Multi-Team Support**: Process multiple teams/components configured in `TEAMS` environment variable
+- 🏷️ **Component Filtering**: Filter issues by Jira Components (team names) for precise reporting
 - 📅 **Month-based Filtering**: Find all issues that transitioned to "In Progress" during a specific month
 - 🖥️ **HTTP Server**: REST API for on-demand document generation
 - 🎨 **Formatted Tables**: Custom fonts (Aptos Narrow, size 8), proper margins, and styling
@@ -85,6 +87,14 @@ make build
 make build-server
 make build-month
 make build-sprint
+make build-web
+make build-ui
+
+# Run commands
+make run-month MONTH=2025.10              # Generate Word document
+make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
+make run-web                               # Build UI and run web server
+make dev-ui                                # Start React dev server
 
 # Show all available targets
 make help
@@ -121,9 +131,14 @@ The server will respond to HTTP requests for document generation.
 
 ### Get Month Issues
 
-Fetch all issues that were "In Progress" during October 2025:
+Fetch all issues that were "In Progress" during October 2025, grouped by teams configured in `TEAMS`:
 ```bash
 make run-month MONTH=2025.10
+```
+
+To see issues in console without generating a Word document:
+```bash
+make run-month MONTH=2025.10 LOGONLY=1
 ```
 
 Or run directly:
@@ -135,6 +150,13 @@ Or run directly:
 - `-month="YYYY.MM"` (required): Month to fetch issues from (e.g., "2025.10")
 - `-output="file.docx"` (optional): Output file name (default: from .env)
 - `-debug`: Print issues to console instead of generating Word document
+
+#### How it works:
+The month command processes each team configured in the `TEAMS` environment variable:
+- For each team, it fetches issues that were "In Progress" during the specified month
+- Issues are filtered by the team's component name in Jira
+- Results are grouped by team in the output document
+- Each team gets separate sections for "Closed Issues" and "Open Issues"
 
 ### Get Sprint Issues
 
@@ -209,22 +231,36 @@ These IDs/names may vary in your Jira instance. Use the API endpoint mentioned a
 
 ### Teams configuration
 
-The `TEAMS` environment variable configures which teams are used by the application:
+The `TEAMS` environment variable configures which teams/components are processed by the month issues command:
 
-- **TEAMS** (default: `PROCESSING,STABLETEK`): A comma-separated list of team names.  
+- **TEAMS** (required): A comma-separated list of team/component names (e.g., `PROCESSING,STABLETEK`).  
+  - Each team name should match a Jira Component name exactly (case-insensitive matching)
+  - The month command will fetch and group issues separately for each team
+  - Issues are filtered by matching the team name against the issue's Components field in Jira
 
-In code this is available as a Go slice `cfg.Teams` (e.g., `[]string{"PROCESSING", "STABLETEK"}` by default).
+In code this is available as a Go slice `cfg.Teams` (e.g., `[]string{"PROCESSING", "STABLETEK"}`).
+
+**Note**: The team names in `TEAMS` must match the Component names in your Jira instance. Use the Jira UI or API to verify component names.
 
 ### Output File Format
 
-Generated Word documents include:
+Generated Word documents include sections for each team configured in `TEAMS`:
+
+**For Month Issues Command:**
+- Each team gets two sections:
+  1. "Closed Issues During [Month] ([Team])" - Issues that were closed
+  2. "Issues were in work but not Closed during [Month] ([Team])" - Issues still open
+
+**Table Columns:**
 - **Type**: Issue type (Bug, Feature, Task)
-- **Key**: Jira issue key (e.g., PROJ-123)
-- **Summary**: Issue title
+- **ID**: Jira issue key (e.g., PROJ-123)
+- **Description**: Issue title/summary
 - **Epic**: Epic name the issue belongs to
-- **Story Points**: Story point estimate
-- **Status**: Current issue status
-- **URL**: Direct link to the issue in Jira
+- **SP**: Story point estimate
+
+**Additional Issue Information:**
+- **Status**: Current issue status (available in debug mode)
+- **URL**: Direct link to the issue in Jira (available in code)
 
 ### Table Formatting
 
@@ -248,6 +284,16 @@ Tables in generated documents use:
 ### "Failed to search epics" error
 - Verify `JIRA_EPIC_FIELD` is correct for your Jira instance
 - Check that your Jira user has permission to view custom fields
+
+### "required environment variable TEAMS is not set" error
+- Add `TEAMS=PROCESSING,STABLETEK` (or your team names) to your `.env` file
+- Ensure team names match Jira Component names exactly
+
+### No issues found for a team
+- Verify the team name in `TEAMS` matches a Component name in Jira (check spelling and case)
+- Ensure issues have the Component assigned in Jira
+- Check that issues were actually "In Progress" during the specified month
+- Use `-debug` flag to see detailed filtering information
 
 ### Document generation fails
 - Check that the output directory exists and is writable
