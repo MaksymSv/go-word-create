@@ -44,3 +44,5 @@ dist/
 
 # Generated Word documents
 *.docx
+
+**/node_modules/
