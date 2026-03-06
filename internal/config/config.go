@@ -19,6 +19,7 @@ type Config struct {
 	JiraSPField        string
 	JiraComponentField string
 	Teams              []string
+	IssueTypes         []string
 }
 
 // Load reads the configuration from environment variables
@@ -54,6 +55,26 @@ func Load() (*Config, error) {
 		}
 	}
 
+	// Validate that at least one team is configured
+	if len(teams) == 0 {
+		return nil, fmt.Errorf("no teams configured in TEAMS environment variable")
+	}
+
+	// Parse ISSUE_TYPES environment variable into a slice (optional, defaults to Bug, Story, Task).
+	rawIssueTypes := os.Getenv("ISSUE_TYPES")
+	var issueTypes []string
+	if rawIssueTypes != "" {
+		for _, it := range strings.Split(rawIssueTypes, ",") {
+			if trimmed := strings.TrimSpace(it); trimmed != "" {
+				issueTypes = append(issueTypes, trimmed)
+			}
+		}
+	}
+	// Use default issue types if none provided
+	if len(issueTypes) == 0 {
+		issueTypes = []string{"Bug", "Story", "Task"}
+	}
+
 	config := &Config{
 		JiraURL:            os.Getenv("JIRA_URL"),
 		JiraUsername:       os.Getenv("JIRA_USERNAME"),
@@ -65,6 +86,7 @@ func Load() (*Config, error) {
 		JiraSPField:        getEnvWithDefault("JIRA_SP_FIELD", "customfield_10004"),
 		JiraComponentField: getEnvWithDefault("JIRA_COMPONENT_FIELD", "components"),
 		Teams:              teams,
+		IssueTypes:         issueTypes,
 	}
 
 	return config, nil

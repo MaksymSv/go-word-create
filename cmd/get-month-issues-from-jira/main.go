@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"go-word-create/internal/config"
@@ -14,17 +15,31 @@ import (
 )
 
 // truncate cuts a string if it's longer than maxLen and adds "..." at the end
+// Uses rune-based indexing to properly handle multi-byte UTF-8 characters
 func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
 		return s
 	}
-	return s[:maxLen-3] + "..."
+	return string(runes[:maxLen-3]) + "..."
 }
 
 // TeamIssues groups closed and open issues for a specific team/component.
 type TeamIssues struct {
 	Closed []jiraservice.Issue
 	Open   []jiraservice.Issue
+}
+
+// isClosedStatus checks if a status represents a closed/completed issue.
+func isClosedStatus(status string) bool {
+	closedStatuses := []string{"Closed", "Done", "Resolved", "Complete", "Completed"}
+	statusLower := strings.ToLower(status)
+	for _, closedStatus := range closedStatuses {
+		if strings.ToLower(closedStatus) == statusLower {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
@@ -70,7 +85,7 @@ func main() {
 	for _, team := range cfg.Teams {
 		log.Printf("Fetching issues for team/component '%s'", team)
 
-		issuesForTeam, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, team, monthStart, monthEnd, []string{"Bug", "Story", "Task"})
+		issuesForTeam, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, team, monthStart, monthEnd, cfg.IssueTypes)
 		if err != nil {
 			log.Fatalf("Failed to get issues in progress for team '%s': %v", team, err)
 		}
@@ -81,7 +96,7 @@ func main() {
 		var openForTeam []jiraservice.Issue
 
 		for _, issue := range issuesForTeam {
-			if issue.Status == "Closed" {
+			if isClosedStatus(issue.Status) {
 				closedForTeam = append(closedForTeam, issue)
 			} else {
 				openForTeam = append(openForTeam, issue)
@@ -124,8 +139,9 @@ func main() {
 		}
 
 		// output file has format some_file.docx. Insert formatted date "yyyy-mm" before .docx
-		if outputFile != nil {
-			*outputFile = fmt.Sprintf("%s - %s.docx", (*outputFile)[:len(*outputFile)-5], monthStart.Format("2006-01"))
+		if *outputFile != "" {
+			baseFilename := strings.TrimSuffix(*outputFile, ".docx")
+			*outputFile = fmt.Sprintf("%s - %s.docx", baseFilename, monthStart.Format("2006-01"))
 		}
 
 		// Save the document
