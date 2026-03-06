@@ -4,9 +4,8 @@ A Go project that generates Word documents from Jira issues. Supports fetching i
 
 ## Project Overview
 
-This project provides multiple command-line tools to fetch Jira issues and generate Word documents:
+This project provides command-line tools to fetch Jira issues and generate Word documents:
 
-- **Server**: HTTP server for generating Word documents on demand
 - **Get Sprint Issues**: Fetch all issues from a specific sprint and export to Word
 - **Get Month Issues**: Fetch all issues that were "In Progress" during a specific month, grouped by team/component, and export to Word
 
@@ -18,7 +17,6 @@ This project provides multiple command-line tools to fetch Jira issues and gener
 - 👥 **Multi-Team Support**: Process multiple teams/components configured in `TEAMS` environment variable
 - 🏷️ **Component Filtering**: Filter issues by Jira Components (team names) for precise reporting
 - 📅 **Month-based Filtering**: Find all issues that transitioned to "In Progress" during a specific month
-- 🖥️ **HTTP Server**: REST API for on-demand document generation
 - 🎨 **Formatted Tables**: Custom fonts (Aptos Narrow, size 8), proper margins, and styling
 
 ## Prerequisites
@@ -84,17 +82,12 @@ Look for `customfield_XXXXX` entries for Epic Link and Story Points fields.
 make build
 
 # Build specific binary
-make build-server
 make build-month
 make build-sprint
-make build-web
-make build-ui
 
 # Run commands
 make run-month MONTH=2025.10              # Generate Word document
 make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
-make run-web                               # Build UI and run web server
-make dev-ui                                # Start React dev server
 
 # Show all available targets
 make help
@@ -103,9 +96,6 @@ make help
 ### Using Go directly
 
 ```bash
-# Build server
-go build -o bin/server ./cmd/server
-
 # Build month issues fetcher
 go build -o bin/get-month-issues ./cmd/get-month-issues-from-jira
 
@@ -114,20 +104,6 @@ go build -o bin/get-sprint-issues ./cmd/get-sprint-issues-from-jira
 ```
 
 ## Running
-
-### Server
-
-Start the HTTP server (default port 8080):
-```bash
-make run
-```
-
-Or run directly:
-```bash
-./bin/server
-```
-
-The server will respond to HTTP requests for document generation.
 
 ### Get Month Issues
 
@@ -175,13 +151,11 @@ Fetch all issues from a specific sprint:
 ```
 go-word-create/
 ├── cmd/
-│   ├── server/              # HTTP server
 │   ├── get-sprint-issues-from-jira/   # Sprint issues fetcher
 │   └── get-month-issues-from-jira/    # Month issues fetcher
 ├── internal/
 │   ├── config/              # Configuration loading from .env
 │   ├── jiraservice/         # Jira API client and issue fetching
-│   ├── server/              # HTTP handler
 │   └── word/                # Word document generation, table formatting utilities
 ├── go.mod                   # Go module definition
 ├── .env.example             # Example environment variables
