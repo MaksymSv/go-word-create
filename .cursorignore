@@ -1,0 +1,36 @@
+# VCS and editor metadata
+.git/
+.gitignore
+.DS_Store
+.idea/
+.vscode/
+
+# Build artifacts and binaries
+bin/
+dist/
+build/
+out/
+*.exe
+*.dll
+*.so
+
+# Node / frontend dependencies
+node_modules/
+cmd/web/ui/node_modules/
+
+# Logs and temp files
+*.log
+tmp/
+temp/
+
+# Environment and secrets
+.env
+.env.local
+.env.*
+
+# Generated documents and reports
+*.docx
+*.pdf
+
+# Go build cache directories (if present)
+cache/
