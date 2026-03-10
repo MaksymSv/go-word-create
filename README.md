@@ -88,6 +88,8 @@ make build-sprint
 # Run commands
 make run-month MONTH=2025.10              # Generate Word document
 make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
+make run-sprint SPRINT="Sprint 16"        # Generate Word document for sprint
+make run-sprint SPRINT="Sprint 16" LOGONLY=1   # Print to console only (debug mode)
 
 # Show all available targets
 make help
@@ -137,6 +139,16 @@ The month command processes each team configured in the `TEAMS` environment vari
 ### Get Sprint Issues
 
 Fetch all issues from a specific sprint:
+```bash
+make run-sprint SPRINT="Sprint 16"
+```
+
+To see issues in console without generating a Word document:
+```bash
+make run-sprint SPRINT="Sprint 16" LOGONLY=1
+```
+
+Or run directly:
 ```bash
 ./bin/get-sprint-issues -sprint="Sprint 16" -output="sprint-16.docx"
 ```

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"go-word-create/internal/config"
 	"go-word-create/internal/jiraservice"
@@ -13,11 +14,13 @@ import (
 )
 
 // truncate cuts a string if it's longer than maxLen and adds "..." at the end
+// Uses rune-based indexing to properly handle multi-byte UTF-8 characters
 func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
 		return s
 	}
-	return s[:maxLen-3] + "..."
+	return string(runes[:maxLen-3]) + "..."
 }
 
 func main() {
@@ -40,47 +43,35 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Printf("Fetching issues for sprint '%s'", *sprintName)
+
 	// Create Jira service
 	jiraService, err := jiraservice.NewJiraService(cfg.JiraURL, cfg.JiraUsername, cfg.JiraAPIToken, cfg.JiraEpicField, cfg.JiraSPField)
 	if err != nil {
 		log.Fatalf("Failed to create Jira service: %v", err)
 	}
 
-	// Get issues from sprint
-	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, cfg.BoardName, *sprintName, []string{"Bug", "Feature", "Task"})
+	// Get issues from sprint (use configured issue types)
+	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, cfg.BoardName, *sprintName, cfg.IssueTypes)
 	if err != nil {
 		log.Fatalf("Failed to get sprint issues: %v", err)
 	}
 
 	if *debugMode {
 		// Print debug information
-		fmt.Printf("Found %d issues in sprint '%s'\n", len(issues), *sprintName)
-		fmt.Println("\nIssues:")
-		for _, issue := range issues {
-			// Truncate strings that are too long
-			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f\n",
-				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints)
-		}
-		fmt.Printf("\nTotal issues: %d\n", len(issues))
+		log.Printf("Found %d issues in sprint '%s'\n", len(issues), *sprintName)
+		logIssuesTable("\nIssues:", issues)
+		log.Printf("\nTotal issues: %d\n", len(issues))
 	} else {
-		// Create Word document
+		// Create Word document with heading
 		doc := word.NewDocument()
-		table := word.NewTable(&doc.WordDocument)
+		addTableToDocument(doc, fmt.Sprintf("Sprint %s - Issues", *sprintName), issues)
 
-		// Add header row
-		headers := []string{"Type", "Key", "Summary", "Epic", "Story Points"}
-		table.AddHeaderRow(headers)
-
-		// Add issue rows
-		for _, issue := range issues {
-			data := []string{
-				issue.Type,
-				issue.Key,
-				issue.Summary,
-				issue.Epic,
-				strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
-			}
-			table.AddDataRow(data)
+		// Append sprint name to output file (e.g. output.docx -> output - Sprint-16.docx)
+		if *outputFile != "" {
+			baseFilename := strings.TrimSuffix(*outputFile, ".docx")
+			sprintForFile := strings.ReplaceAll(*sprintName, " ", "-")
+			*outputFile = fmt.Sprintf("%s - %s.docx", baseFilename, sprintForFile)
 		}
 
 		// Save the document
@@ -89,6 +80,33 @@ func main() {
 			log.Fatalf("Failed to save document: %v", err)
 		}
 
-		fmt.Printf("Created document '%s' with %d issues\n", *outputFile, len(issues))
+		log.Printf("Created document '%s' with %d issues\n", *outputFile, len(issues))
+	}
+}
+
+func logIssuesTable(header string, lines []jiraservice.Issue) {
+	fmt.Println(header)
+	for _, issue := range lines {
+		fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%-12s\n",
+			issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
+	}
+}
+
+func addTableToDocument(doc *word.Doc, headingText string, tableContent []jiraservice.Issue) {
+	headers := []string{"Type", "ID", "Description", "Epic", "SP"}
+
+	doc.AddHeading(1, headingText)
+	table := word.NewTable(&doc.WordDocument)
+	table.AddHeaderRow(headers)
+
+	for _, issue := range tableContent {
+		data := []string{
+			issue.Type,
+			issue.Key,
+			issue.Summary,
+			issue.Epic,
+			strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
+		}
+		table.AddDataRow(data)
 	}
 }

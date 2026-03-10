@@ -12,6 +12,7 @@ help:
 	@echo "  make build-month        - Build month issues fetcher"
 	@echo "  make build-sprint       - Build sprint issues fetcher"
 	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
+	@echo "  make run-sprint SPRINT=\"Sprint 16\" [LOGONLY=1] - Run collecting sprint issues (LOGONLY optional)"
 	@echo "  make clean              - Remove build artifacts"
 	@echo "  make test               - Run tests"
 	@echo "  make fmt                - Format code"
@@ -42,6 +43,15 @@ run-month: build-month
 		exit 1; \
 	fi
 	$(OUTPUT_DIR)/get-month-issues -month="$(MONTH)"$(if $(LOGONLY), -debug)
+
+# Run sprint issues fetcher
+run-sprint: build-sprint
+	@if [ -z "$(SPRINT)" ]; then \
+		echo "Error: SPRINT parameter required"; \
+		echo "Usage: make run-sprint SPRINT=\"Sprint 16\""; \
+		exit 1; \
+	fi
+	$(OUTPUT_DIR)/get-sprint-issues -sprint="$(SPRINT)"$(if $(LOGONLY), -debug)
 
 # Clean build artifacts
 clean:
