@@ -31,19 +31,25 @@ func main() {
 	}
 
 	// Define command line flags
+	boardName := flag.String("board", "", "Jira board name (required)")
 	sprintName := flag.String("sprint", "", "Sprint name (required)")
 	outputFile := flag.String("output", cfg.OutputFile, "Output file name")
 	debugMode := flag.Bool("debug", false, "Debug mode: print data without generating Word document")
 	flag.Parse()
 
 	// Validate required flags
+	if *boardName == "" {
+		fmt.Println("Error: Board name is required")
+		flag.Usage()
+		os.Exit(1)
+	}
 	if *sprintName == "" {
 		fmt.Println("Error: Sprint name is required")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	log.Printf("Fetching issues for sprint '%s'", *sprintName)
+	log.Printf("Fetching issues for sprint '%s' on board '%s'", *sprintName, *boardName)
 
 	// Create Jira service
 	jiraService, err := jiraservice.NewJiraService(cfg.JiraURL, cfg.JiraUsername, cfg.JiraAPIToken, cfg.JiraEpicField, cfg.JiraSPField)
@@ -52,7 +58,7 @@ func main() {
 	}
 
 	// Get issues from sprint (use configured issue types)
-	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, cfg.BoardName, *sprintName, cfg.IssueTypes)
+	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, *boardName, *sprintName, cfg.IssueTypes)
 	if err != nil {
 		log.Fatalf("Failed to get sprint issues: %v", err)
 	}

@@ -12,7 +12,6 @@ type Config struct {
 	JiraURL            string
 	JiraUsername       string
 	JiraAPIToken       string
-	BoardName          string
 	ProjectKey         string
 	OutputFile         string
 	JiraEpicField      string
@@ -35,7 +34,6 @@ func Load() (*Config, error) {
 		"JIRA_URL",
 		"JIRA_USERNAME",
 		"JIRA_API_TOKEN",
-		"JIRA_BOARD_NAME",
 		"JIRA_PROJECT_KEY",
 		"TEAMS",
 	}
@@ -79,7 +77,6 @@ func Load() (*Config, error) {
 		JiraURL:            os.Getenv("JIRA_URL"),
 		JiraUsername:       os.Getenv("JIRA_USERNAME"),
 		JiraAPIToken:       os.Getenv("JIRA_API_TOKEN"),
-		BoardName:          os.Getenv("JIRA_BOARD_NAME"),
 		ProjectKey:         os.Getenv("JIRA_PROJECT_KEY"),
 		OutputFile:         getEnvWithDefault("DEFAULT_OUTPUT_FILE", "sprint-issues.docx"),
 		JiraEpicField:      getEnvWithDefault("JIRA_EPIC_FIELD", "customfield_14500"),

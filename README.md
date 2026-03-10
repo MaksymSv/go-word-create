@@ -48,7 +48,6 @@ cp .env.example .env
 JIRA_URL=https://your-jira-instance.atlassian.net
 JIRA_USERNAME=your-email@example.com
 JIRA_API_TOKEN=your-api-token
-JIRA_BOARD_NAME=Your Board Name
 JIRA_PROJECT_KEY=PROJ
 JIRA_EPIC_FIELD=customfield_10014
 JIRA_SP_FIELD=customfield_10015
@@ -88,8 +87,8 @@ make build-sprint
 # Run commands
 make run-month MONTH=2025.10              # Generate Word document
 make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
-make run-sprint SPRINT="Sprint 16"        # Generate Word document for sprint
-make run-sprint SPRINT="Sprint 16" LOGONLY=1   # Print to console only (debug mode)
+make run-sprint BOARD="My Board" SPRINT="Sprint 16"        # Generate Word document for sprint
+make run-sprint BOARD="My Board" SPRINT="Sprint 16" LOGONLY=1   # Print to console only (debug mode)
 
 # Show all available targets
 make help
@@ -140,20 +139,21 @@ The month command processes each team configured in the `TEAMS` environment vari
 
 Fetch all issues from a specific sprint:
 ```bash
-make run-sprint SPRINT="Sprint 16"
+make run-sprint BOARD="My Board" SPRINT="Sprint 16"
 ```
 
 To see issues in console without generating a Word document:
 ```bash
-make run-sprint SPRINT="Sprint 16" LOGONLY=1
+make run-sprint BOARD="My Board" SPRINT="Sprint 16" LOGONLY=1
 ```
 
 Or run directly:
 ```bash
-./bin/get-sprint-issues -sprint="Sprint 16" -output="sprint-16.docx"
+./bin/get-sprint-issues -board="My Board" -sprint="Sprint 16" -output="sprint-16.docx"
 ```
 
 #### Flags:
+- `-board="Board Name"` (required): Jira board name
 - `-sprint="Sprint Name"` (required): Sprint name to fetch issues from
 - `-output="file.docx"` (optional): Output file name (default: from .env)
 - `-debug`: Print issues to console instead of generating Word document
@@ -260,12 +260,12 @@ Tables in generated documents use:
 ## Troubleshooting
 
 ### "Board not found" error
-- Check that `JIRA_BOARD_NAME` in `.env` matches your Jira board name exactly
+- Check that the `-board` parameter matches your Jira board name exactly
 - Verify you have access to the board
 
 ### "Sprint not found" error
 - Ensure the sprint name matches exactly (case-sensitive)
-- Sprint must be associated with the board specified in `.env`
+- Sprint must be associated with the board specified in the `-board` parameter
 
 ### "Failed to search epics" error
 - Verify `JIRA_EPIC_FIELD` is correct for your Jira instance
