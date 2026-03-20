@@ -2,7 +2,6 @@ package word
 
 import (
 	"bytes"
-	"log"
 
 	"github.com/carmel/gooxml/document"
 )
@@ -28,22 +27,10 @@ func NewDocument() *Doc {
 
 // SaveDocument saves the Word document to the specified output file
 func (d *Doc) SaveDocumentToFile(outputFile *string) error {
-	// Save the document
-	err := d.WordDocument.SaveToFile(*outputFile)
-	if err != nil {
-		log.Fatalf("Failed to save document: %v", err)
-		return err
-	}
-	return nil
+	return d.WordDocument.SaveToFile(*outputFile)
 }
 
 // SaveDocument saves the Word document to the specified output file
 func (d *Doc) SaveDocument(buf bytes.Buffer) error {
-	// Save the document
-	err := d.WordDocument.Save(&buf)
-	if err != nil {
-		log.Fatalf("Failed to save document: %v", err)
-		return err
-	}
-	return nil
+	return d.WordDocument.Save(&buf)
 }

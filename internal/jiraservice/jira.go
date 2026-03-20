@@ -194,26 +194,11 @@ func (s *JiraService) LoadIssuesFromSprint(sprintId int, epicNames map[string]st
 	var result []Issue
 	for _, issue := range issues {
 		issueType := issue.Fields.Type.Name
-		epicName := getEpicName(issue, s.epicField, epicNames)
-		storyPoints := getStoryPoints(issue, s.spField)
-
-		// If a filter was provided, only include matching types (case-insensitive)
-		if len(typeFilter) > 0 {
-			if _, ok := typeFilter[strings.ToLower(strings.TrimSpace(issueType))]; !ok {
-				// skip this issue because its type is not in the filter list
-				continue
-			}
+		if !matchesTypeFilter(issueType, typeFilter) {
+			continue
 		}
 
-		result = append(result, Issue{
-			Key:         issue.Key,
-			Summary:     issue.Fields.Summary,
-			Epic:        epicName,
-			StoryPoints: storyPoints,
-			Type:        issueType,
-			Status:      issue.Fields.Status.Name,
-			URL:         fmt.Sprintf("%s/browse/%s", s.url, issue.Key),
-		})
+		result = append(result, s.mapJiraIssueToIssue(issue, issueType, epicNames))
 	}
 
 	return result, nil
@@ -291,6 +276,70 @@ func createFilterMap(issuesTypes []string) map[string]struct{} {
 	return typeFilter
 }
 
+func matchesTypeFilter(issueType string, typeFilter map[string]struct{}) bool {
+	if len(typeFilter) == 0 {
+		return true
+	}
+
+	_, ok := typeFilter[strings.ToLower(strings.TrimSpace(issueType))]
+	return ok
+}
+
+func parseChangelogTime(created string) (time.Time, error) {
+	createdTime, err := time.Parse("2006-01-02T15:04:05.000-0700", created)
+	if err == nil {
+		return createdTime, nil
+	}
+
+	return time.Parse(time.RFC3339, created)
+}
+
+func wasInProgressDuringMonth(histories []jira.ChangelogHistory, monthStart, monthEnd time.Time) bool {
+	for _, history := range histories {
+		createdTime, err := parseChangelogTime(history.Created)
+		if err != nil {
+			log.Printf("warning: could not parse changelog timestamp %s: %v", history.Created, err)
+			continue
+		}
+
+		if createdTime.Before(monthEnd) && !createdTime.Before(monthStart) {
+			for _, item := range history.Items {
+				if item.Field == "status" && item.ToString == "In Progress" {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func matchesComponent(components []*jira.Component, component string) bool {
+	if component == "" {
+		return true
+	}
+
+	for _, c := range components {
+		if c != nil && strings.EqualFold(strings.TrimSpace(c.Name), strings.TrimSpace(component)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *JiraService) mapJiraIssueToIssue(jiraIssue jira.Issue, issueType string, epicNames map[string]string) Issue {
+	return Issue{
+		Key:         jiraIssue.Key,
+		Summary:     jiraIssue.Fields.Summary,
+		Epic:        getEpicName(jiraIssue, s.epicField, epicNames),
+		StoryPoints: getStoryPoints(jiraIssue, s.spField),
+		Type:        issueType,
+		Status:      jiraIssue.Fields.Status.Name,
+		URL:         fmt.Sprintf("%s/browse/%s", s.url, jiraIssue.Key),
+	}
+}
+
 // GetIssuesInProgressDuringMonth returns issues that were in 'In Progress' status
 // during the specified month, regardless of their current status.
 // It checks the issue changelog to find when status changed to "In Progress".
@@ -321,128 +370,26 @@ func (s *JiraService) GetIssuesInProgressDuringMonth(projectKey, component strin
 
 	var result []Issue
 	for _, jiraIssue := range jiraIssues {
-		// Determine issue type
 		issueType := jiraIssue.Fields.Type.Name
-
-		// Apply type filter if provided
-		if len(typeFilter) > 0 {
-			if _, ok := typeFilter[strings.ToLower(strings.TrimSpace(issueType))]; !ok {
-				continue
-			}
+		if !matchesTypeFilter(issueType, typeFilter) {
+			continue
 		}
 
-		// Check if this issue was in 'In Progress' status during the target month
-		wasInProgressDuringMonth := false
+		var histories []jira.ChangelogHistory
 		if jiraIssue.Changelog != nil {
-			for _, history := range jiraIssue.Changelog.Histories {
-				// Parse the created timestamp
-				createdTime, err := time.Parse("2006-01-02T15:04:05.000-0700", history.Created)
-				if err != nil {
-					// Try alternate format
-					createdTime, err = time.Parse(time.RFC3339, history.Created)
-					if err != nil {
-						log.Printf("warning: could not parse changelog timestamp %s: %v", history.Created, err)
-						continue
-					}
-				}
-
-				// Check if this change happened during the target month
-				if createdTime.Before(monthEnd) && !createdTime.Before(monthStart) {
-					// Look for status changes to "In Progress"
-					for _, item := range history.Items {
-						if item.Field == "status" && item.ToString == "In Progress" {
-							wasInProgressDuringMonth = true
-							break
-						}
-					}
-				}
-
-				if wasInProgressDuringMonth {
-					break
-				}
-			}
+			histories = jiraIssue.Changelog.Histories
 		}
 
-		// Skip if not in progress during month
+		wasInProgressDuringMonth := wasInProgressDuringMonth(histories, monthStart, monthEnd)
 		if !wasInProgressDuringMonth {
 			continue
 		}
 
-		// If a component is provided, filter by Jira Components containing that component name
-		if component != "" {
-			hasComponent := false
-			for _, c := range jiraIssue.Fields.Components {
-				if c != nil && strings.EqualFold(strings.TrimSpace(c.Name), strings.TrimSpace(component)) {
-					hasComponent = true
-					break
-				}
-			}
-			if !hasComponent {
-				continue
-			}
+		if !matchesComponent(jiraIssue.Fields.Components, component) {
+			continue
 		}
 
-		// Resolve epic name
-		epicName := ""
-		if v, ok := jiraIssue.Fields.Unknowns[s.epicField]; ok {
-			switch t := v.(type) {
-			case string:
-				if name, found := epicNames[t]; found {
-					epicName = name
-				} else {
-					epicName = t
-				}
-			case map[string]interface{}:
-				var key string
-				if k, ok := t["key"].(string); ok {
-					key = k
-				} else if v2, ok := t["value"].(string); ok {
-					key = v2
-				}
-				if key != "" {
-					if name, found := epicNames[key]; found {
-						epicName = name
-					} else {
-						epicName = key
-					}
-				}
-			}
-		}
-
-		// Extract story points
-		storyPoints := 0.0
-		if spField, ok := jiraIssue.Fields.Unknowns[s.spField]; ok {
-			switch sp := spField.(type) {
-			case float64:
-				storyPoints = sp
-			case int:
-				storyPoints = float64(sp)
-			case int64:
-				storyPoints = float64(sp)
-			case string:
-				if f, err := strconv.ParseFloat(sp, 64); err == nil {
-					storyPoints = f
-				}
-			case map[string]interface{}:
-				if v, ok := sp["value"].(float64); ok {
-					storyPoints = v
-				} else if sstr, ok := sp["value"].(string); ok {
-					if f, err := strconv.ParseFloat(sstr, 64); err == nil {
-						storyPoints = f
-					}
-				}
-			}
-		}
-
-		result = append(result, Issue{
-			Key:         jiraIssue.Key,
-			Summary:     jiraIssue.Fields.Summary,
-			Epic:        epicName,
-			StoryPoints: storyPoints,
-			Type:        issueType,
-			Status:      jiraIssue.Fields.Status.Name,
-			URL:         fmt.Sprintf("%s/browse/%s", s.url, jiraIssue.Key),
-		})
+		result = append(result, s.mapJiraIssueToIssue(jiraIssue, issueType, epicNames))
 	}
 
 	return result, nil
