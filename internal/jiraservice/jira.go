@@ -25,6 +25,8 @@ type Issue struct {
 	Type        string
 	Status      string
 	URL         string
+	Labels      []string
+	Components  []string
 }
 
 func NewJiraService(baseURL, username, password, epicField, spField string) (*JiraService, error) {
@@ -205,6 +207,16 @@ func (s *JiraService) LoadIssuesFromSprint(sprintId int, epicNames map[string]st
 			}
 		}
 
+		labels := make([]string, len(issue.Fields.Labels))
+		copy(labels, issue.Fields.Labels)
+
+		var components []string
+		for _, c := range issue.Fields.Components {
+			if c != nil {
+				components = append(components, c.Name)
+			}
+		}
+
 		result = append(result, Issue{
 			Key:         issue.Key,
 			Summary:     issue.Fields.Summary,
@@ -213,6 +225,8 @@ func (s *JiraService) LoadIssuesFromSprint(sprintId int, epicNames map[string]st
 			Type:        issueType,
 			Status:      issue.Fields.Status.Name,
 			URL:         fmt.Sprintf("%s/browse/%s", s.url, issue.Key),
+			Labels:      labels,
+			Components:  components,
 		})
 	}
 

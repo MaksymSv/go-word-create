@@ -19,6 +19,7 @@ type Config struct {
 	JiraSPField        string
 	JiraComponentField string
 	Teams              []string
+	ReportLabels       []string
 }
 
 // Load reads the configuration from environment variables
@@ -54,6 +55,8 @@ func Load() (*Config, error) {
 		}
 	}
 
+	reportLabels := parseReportLabels(os.Getenv("REPORT_LABELS"))
+
 	config := &Config{
 		JiraURL:            os.Getenv("JIRA_URL"),
 		JiraUsername:       os.Getenv("JIRA_USERNAME"),
@@ -65,6 +68,7 @@ func Load() (*Config, error) {
 		JiraSPField:        getEnvWithDefault("JIRA_SP_FIELD", "customfield_10004"),
 		JiraComponentField: getEnvWithDefault("JIRA_COMPONENT_FIELD", "components"),
 		Teams:              teams,
+		ReportLabels:       reportLabels,
 	}
 
 	return config, nil
@@ -76,4 +80,20 @@ func getEnvWithDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// parseReportLabels parses REPORT_LABELS env var; falls back to the default AI label set.
+func parseReportLabels(raw string) []string {
+	if raw != "" {
+		var labels []string
+		for _, l := range strings.Split(raw, ",") {
+			if trimmed := strings.TrimSpace(l); trimmed != "" {
+				labels = append(labels, trimmed)
+			}
+		}
+		if len(labels) > 0 {
+			return labels
+		}
+	}
+	return []string{"ai-assisted", "ai-assisted-ba", "ai-assisted-dev", "ai-assisted-qa"}
 }

@@ -1,10 +1,11 @@
-.PHONY: build run clean test fmt lint help build-ui run-web
+.PHONY: build run clean test fmt lint help build-ui run-web build-sprint-label-report run-sprint-label-report
 
 # Variables
 BINARY_NAME=go-word-create
 MAIN_PACKAGE=./cmd/server
 MONTH_CMD=./cmd/get-month-issues-from-jira
 SPRINT_CMD=./cmd/get-sprint-issues-from-jira
+SPRINT_LABEL_CMD=./cmd/get-sprint-label-report
 WEB_CMD=./cmd/web
 OUTPUT_DIR=./bin
 UI_DIR=./cmd/web/ui
@@ -21,6 +22,8 @@ help:
 	@echo "  make run                - Run the server"
 	@echo "  make run-web            - Build UI and run web server"
 	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
+	@echo "  make build-sprint-label-report          - Build sprint label report binary"
+	@echo "  make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] [LOGONLY=1] - Run sprint label report"
 	@echo "  make dev-ui             - Start React dev server"
 	@echo "  make clean              - Remove build artifacts"
 	@echo "  make test               - Run tests"
@@ -29,7 +32,7 @@ help:
 	@echo "  make help               - Show this help message"
 
 # Build all binaries
-build: build-server build-month build-sprint build-web
+build: build-server build-month build-sprint build-sprint-label-report build-web
 	@echo "✓ All binaries built in $(OUTPUT_DIR)/"
 
 # Build server binary
@@ -49,6 +52,21 @@ build-sprint:
 	@mkdir -p $(OUTPUT_DIR)
 	go build -o $(OUTPUT_DIR)/get-sprint-issues $(SPRINT_CMD)
 	@echo "✓ Sprint fetcher built: $(OUTPUT_DIR)/get-sprint-issues"
+
+# Build sprint label report binary
+build-sprint-label-report:
+	@mkdir -p $(OUTPUT_DIR)
+	go build -o $(OUTPUT_DIR)/get-sprint-label-report $(SPRINT_LABEL_CMD)
+	@echo "✓ Sprint label report built: $(OUTPUT_DIR)/get-sprint-label-report"
+
+# Run sprint label report
+run-sprint-label-report: build-sprint-label-report
+	@if [ -z "$(SPRINT)" ]; then \
+		echo "Error: SPRINT parameter required"; \
+		echo "Usage: make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] [LOGONLY=1]"; \
+		exit 1; \
+	fi
+	$(OUTPUT_DIR)/get-sprint-label-report -sprint="$(SPRINT)"$(if $(FORMAT), -format="$(FORMAT)")$(if $(LOGONLY), -debug)
 
 # Build React UI
 build-ui:
