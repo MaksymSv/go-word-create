@@ -7,10 +7,12 @@ import (
 )
 
 type LabelGroup struct {
-	LabelName string
-	Issues    []jiraservice.Issue
-	Count     int
-	TotalSP   float64
+	LabelName  string
+	Issues     []jiraservice.Issue
+	Count      int
+	TotalSP    float64
+	CountPct   float64
+	TotalSPPct float64
 }
 
 type ComponentReport struct {
@@ -62,6 +64,13 @@ func Aggregate(issues []jiraservice.Issue, orderedLabels []string) []ComponentRe
 			groups[i] = LabelGroup{LabelName: l}
 		}
 
+		// Pre-compute component totals for percentage denominators
+		componentTotalCount := len(compIssues[compName])
+		componentTotalSP := 0.0
+		for _, iss := range compIssues[compName] {
+			componentTotalSP += iss.StoryPoints
+		}
+
 		var unlabeled []jiraservice.Issue
 		for _, issue := range compIssues[compName] {
 			matched := false
@@ -76,7 +85,7 @@ func Aggregate(issues []jiraservice.Issue, orderedLabels []string) []ComponentRe
 			}
 		}
 
-		// Compute Count and TotalSP for each group
+		// Compute Count, TotalSP, and percentages for each group
 		for i := range groups {
 			groups[i].Count = len(groups[i].Issues)
 			total := 0.0
@@ -84,6 +93,12 @@ func Aggregate(issues []jiraservice.Issue, orderedLabels []string) []ComponentRe
 				total += iss.StoryPoints
 			}
 			groups[i].TotalSP = total
+			if componentTotalCount > 0 {
+				groups[i].CountPct = float64(groups[i].Count) / float64(componentTotalCount) * 100
+			}
+			if componentTotalSP > 0 {
+				groups[i].TotalSPPct = groups[i].TotalSP / componentTotalSP * 100
+			}
 		}
 
 		reports = append(reports, ComponentReport{

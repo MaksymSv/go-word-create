@@ -43,9 +43,9 @@ files. Phase 1 serves as a confirmation checkpoint only.
 
 **⚠️ CRITICAL**: Phases 3 and 4 both depend on this phase completing first.
 
-- [ ] T001 Add `CountPct float64` and `TotalSPPct float64` fields to the `LabelGroup` struct in `internal/labelreport/aggregator.go`
-- [ ] T002 In `Aggregate()` in `internal/labelreport/aggregator.go`, pre-compute `componentTotalCount` (len of all issues in component) and `componentTotalSP` (sum of StoryPoints across all issues in component) before the per-group loop; then populate `groups[i].CountPct` and `groups[i].TotalSPPct` using those totals with explicit zero-guards (depends on T001)
-- [ ] T003 [P] Add `formatPct(v float64) string` helper to `cmd/get-sprint-label-report/main.go`: if `math.Trunc(v) == v` return `strconv.Itoa(int(v)) + "%"`; otherwise return `strconv.FormatFloat(v, 'f', 1, 64) + "%"` (add `"math"` and `"strconv"` imports as needed; `strconv` is already imported)
+- [x] T001 Add `CountPct float64` and `TotalSPPct float64` fields to the `LabelGroup` struct in `internal/labelreport/aggregator.go`
+- [x] T002 In `Aggregate()` in `internal/labelreport/aggregator.go`, pre-compute `componentTotalCount` (len of all issues in component) and `componentTotalSP` (sum of StoryPoints across all issues in component) before the per-group loop; then populate `groups[i].CountPct` and `groups[i].TotalSPPct` using those totals with explicit zero-guards (depends on T001)
+- [x] T003 [P] Add `formatPct(v float64) string` helper to `cmd/get-sprint-label-report/main.go`: if `math.Trunc(v) == v` return `strconv.Itoa(int(v)) + "%"`; otherwise return `strconv.FormatFloat(v, 'f', 1, 64) + "%"` (add `"math"` and `"strconv"` imports as needed; `strconv` is already imported)
 
 **Checkpoint**: Data model extended, percentages computed, formatter ready — US1 and US2 can now proceed.
 
@@ -62,8 +62,8 @@ and a "Total" row at the bottom of each component block.
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Update `renderShortFormatDoc` in `cmd/get-sprint-label-report/main.go`: change `AddHeaderRow` to `["Label", "Count", "Count,%", "Total SP", "Total SP,%"]`; update each `AddDataRow` call to include `formatPct(g.CountPct)` and `formatPct(g.TotalSPPct)` after Count and Total SP; after the label-group loop, accumulate `totalCountPct` and `totalSPPct` and append a final `AddDataRow` with `["Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct)]` (depends on T001, T002, T003)
-- [ ] T005 [US1] Update `printShortFormatConsole` in `cmd/get-sprint-label-report/main.go`: widen the format string to include `Count,%` and `Total SP,%` columns; after the per-group loop print a separator and a "Total" row with accumulated `totalCountPct` and `totalSPPct` values formatted via `formatPct` (depends on T004 for consistency, can run after T004 completes)
+- [x] T004 [US1] Update `renderShortFormatDoc` in `cmd/get-sprint-label-report/main.go`: change `AddHeaderRow` to `["Label", "Count", "Count,%", "Total SP", "Total SP,%"]`; update each `AddDataRow` call to include `formatPct(g.CountPct)` and `formatPct(g.TotalSPPct)` after Count and Total SP; after the label-group loop, accumulate `totalCountPct` and `totalSPPct` and append a final `AddDataRow` with `["Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct)]` (depends on T001, T002, T003)
+- [x] T005 [US1] Update `printShortFormatConsole` in `cmd/get-sprint-label-report/main.go`: widen the format string to include `Count,%` and `Total SP,%` columns; after the per-group loop print a separator and a "Total" row with accumulated `totalCountPct` and `totalSPPct` values formatted via `formatPct` (depends on T004 for consistency, can run after T004 completes)
 
 **Checkpoint**: Short-format report (both Word doc and console) shows percentage columns and "Total" row. US1 is fully functional and testable independently.
 
@@ -80,8 +80,8 @@ and confirm the console table shows `Count,%` and `Total SP,%` on every issue ro
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Update `renderFullFormatDoc` in `cmd/get-sprint-label-report/main.go`: change `AddHeaderRow` to 8 columns `["Label", "Count", "Count,%", "Total SP", "Total SP,%", "Key", "Summary", "SP"]`; update each `AddDataRow` call to include `formatPct(g.CountPct)` and `formatPct(g.TotalSPPct)` after Count and Total SP; after the label-group loop append a "Total" row `["Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct), "", "", ""]` (depends on T001, T002, T003)
-- [ ] T007 [US2] Update `printFullFormatConsole` in `cmd/get-sprint-label-report/main.go`: widen format string to include `Count,%` and `Total SP,%` columns between Count/Total SP and Key; after the per-group loop print a "Total" row with accumulated percentage totals (depends on T006 for consistency)
+- [x] T006 [US2] Update `renderFullFormatDoc` in `cmd/get-sprint-label-report/main.go`: change `AddHeaderRow` to 8 columns `["Label", "Count", "Count,%", "Total SP", "Total SP,%", "Key", "Summary", "SP"]`; update each `AddDataRow` call to include `formatPct(g.CountPct)` and `formatPct(g.TotalSPPct)` after Count and Total SP; after the label-group loop append a "Total" row `["Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct), "", "", ""]` (depends on T001, T002, T003)
+- [x] T007 [US2] Update `printFullFormatConsole` in `cmd/get-sprint-label-report/main.go`: widen format string to include `Count,%` and `Total SP,%` columns between Count/Total SP and Key; after the per-group loop print a "Total" row with accumulated percentage totals (depends on T006 for consistency)
 
 **Checkpoint**: Both short-format (US1) and full-format (US2) reports include percentage columns and "Total" rows. Feature is complete.
 
@@ -91,8 +91,8 @@ and confirm the console table shows `Count,%` and `Total SP,%` on every issue ro
 
 **Purpose**: Ensure the changes integrate cleanly with the existing project.
 
-- [ ] T008 [P] Run `make build` and verify all binaries (including `bin/get-sprint-label-report`) compile without errors or warnings
-- [ ] T009 [P] Run `make fmt` and `make lint`; fix any issues reported in the modified files
+- [x] T008 [P] Run `make build` and verify all binaries (including `bin/get-sprint-label-report`) compile without errors or warnings
+- [x] T009 [P] Run `make fmt` and `make lint`; fix any issues reported in the modified files
 - [ ] T010 Run the quickstart.md validation checklist (`specs/002-label-report-percentages/quickstart.md`) end-to-end against a real sprint
 
 ---
