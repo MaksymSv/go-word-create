@@ -16,9 +16,11 @@ type LabelGroup struct {
 }
 
 type ComponentReport struct {
-	ComponentName   string
-	LabelGroups     []LabelGroup
-	UnlabeledIssues []jiraservice.Issue
+	ComponentName        string
+	LabelGroups          []LabelGroup
+	UnlabeledIssues      []jiraservice.Issue
+	TotalLabeledCountPct float64
+	TotalLabeledSPPct    float64
 }
 
 // Aggregate groups issues into per-component label reports.
@@ -101,10 +103,27 @@ func Aggregate(issues []jiraservice.Issue, orderedLabels []string) []ComponentRe
 			}
 		}
 
+		// Compute labeled-union percentages for the "Total" summary row.
+		// labeledCount = issues with at least one configured label (total minus unlabeled).
+		labeledCount := componentTotalCount - len(unlabeled)
+		labeledSP := componentTotalSP
+		for _, iss := range unlabeled {
+			labeledSP -= iss.StoryPoints
+		}
+		var totalLabeledCountPct, totalLabeledSPPct float64
+		if componentTotalCount > 0 {
+			totalLabeledCountPct = float64(labeledCount) / float64(componentTotalCount) * 100
+		}
+		if componentTotalSP > 0 {
+			totalLabeledSPPct = labeledSP / componentTotalSP * 100
+		}
+
 		reports = append(reports, ComponentReport{
-			ComponentName:   compName,
-			LabelGroups:     groups,
-			UnlabeledIssues: unlabeled,
+			ComponentName:        compName,
+			LabelGroups:          groups,
+			UnlabeledIssues:      unlabeled,
+			TotalLabeledCountPct: totalLabeledCountPct,
+			TotalLabeledSPPct:    totalLabeledSPPct,
 		})
 	}
 

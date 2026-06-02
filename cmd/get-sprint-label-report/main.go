@@ -89,7 +89,6 @@ func renderShortFormatDoc(doc *word.Doc, reports []labelreport.ComponentReport) 
 		doc.AddHeading(1, r.ComponentName)
 		t := word.NewTable(&doc.WordDocument)
 		t.AddHeaderRow([]string{"Label", "Count", "Count,%", "Total SP", "Total SP,%"})
-		var totalCountPct, totalSPPct float64
 		for _, g := range r.LabelGroups {
 			t.AddDataRow([]string{
 				g.LabelName,
@@ -98,10 +97,8 @@ func renderShortFormatDoc(doc *word.Doc, reports []labelreport.ComponentReport) 
 				strconv.FormatFloat(g.TotalSP, 'f', 1, 64),
 				formatPct(g.TotalSPPct),
 			})
-			totalCountPct += g.CountPct
-			totalSPPct += g.TotalSPPct
 		}
-		t.AddDataRow([]string{"Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct)})
+		t.AddDataRow([]string{"Total", "", formatPct(r.TotalLabeledCountPct), "", formatPct(r.TotalLabeledSPPct)})
 		appendUnlabeledTable(doc, r.UnlabeledIssues)
 	}
 }
@@ -111,12 +108,9 @@ func renderFullFormatDoc(doc *word.Doc, reports []labelreport.ComponentReport) {
 		doc.AddHeading(1, r.ComponentName)
 		t := word.NewTable(&doc.WordDocument)
 		t.AddHeaderRow([]string{"Label", "Count", "Count,%", "Total SP", "Total SP,%", "Key", "Summary", "SP"})
-		var totalCountPct, totalSPPct float64
 		for _, g := range r.LabelGroups {
 			if len(g.Issues) == 0 {
 				t.AddDataRow([]string{g.LabelName, "0", formatPct(g.CountPct), "0.0", formatPct(g.TotalSPPct), "", "", ""})
-				totalCountPct += g.CountPct
-				totalSPPct += g.TotalSPPct
 				continue
 			}
 			for _, iss := range g.Issues {
@@ -131,10 +125,8 @@ func renderFullFormatDoc(doc *word.Doc, reports []labelreport.ComponentReport) {
 					strconv.FormatFloat(iss.StoryPoints, 'f', 1, 64),
 				})
 			}
-			totalCountPct += g.CountPct
-			totalSPPct += g.TotalSPPct
 		}
-		t.AddDataRow([]string{"Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct), "", "", ""})
+		t.AddDataRow([]string{"Total", "", formatPct(r.TotalLabeledCountPct), "", formatPct(r.TotalLabeledSPPct), "", "", ""})
 		appendUnlabeledTable(doc, r.UnlabeledIssues)
 	}
 }
@@ -162,16 +154,13 @@ func printShortFormatConsole(reports []labelreport.ComponentReport) {
 		fmt.Printf("\nComponent: %s\n", r.ComponentName)
 		fmt.Printf("  %-35s | %5s | %8s | %8s | %10s\n", "Label", "Count", "Count,%", "Total SP", "Total SP,%")
 		fmt.Println("  " + repeat("-", 80))
-		var totalCountPct, totalSPPct float64
 		for _, g := range r.LabelGroups {
 			fmt.Printf("  %-35s | %5d | %8s | %8.1f | %10s\n",
 				g.LabelName, g.Count, formatPct(g.CountPct), g.TotalSP, formatPct(g.TotalSPPct))
-			totalCountPct += g.CountPct
-			totalSPPct += g.TotalSPPct
 		}
 		fmt.Println("  " + repeat("-", 80))
 		fmt.Printf("  %-35s | %5s | %8s | %8s | %10s\n",
-			"Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct))
+			"Total", "", formatPct(r.TotalLabeledCountPct), "", formatPct(r.TotalLabeledSPPct))
 		printUnlabeledConsole(r.UnlabeledIssues)
 	}
 }
@@ -182,13 +171,10 @@ func printFullFormatConsole(reports []labelreport.ComponentReport) {
 		fmt.Printf("  %-30s | %5s | %8s | %8s | %10s | %-12s | %-50s | %4s\n",
 			"Label", "Count", "Count,%", "Total SP", "Total SP,%", "Key", "Summary", "SP")
 		fmt.Println("  " + repeat("-", 140))
-		var totalCountPct, totalSPPct float64
 		for _, g := range r.LabelGroups {
 			if len(g.Issues) == 0 {
 				fmt.Printf("  %-30s | %5d | %8s | %8.1f | %10s | %-12s | %-50s | %4s\n",
 					g.LabelName, g.Count, formatPct(g.CountPct), g.TotalSP, formatPct(g.TotalSPPct), "", "", "")
-				totalCountPct += g.CountPct
-				totalSPPct += g.TotalSPPct
 				continue
 			}
 			for _, iss := range g.Issues {
@@ -196,12 +182,10 @@ func printFullFormatConsole(reports []labelreport.ComponentReport) {
 					g.LabelName, g.Count, formatPct(g.CountPct), g.TotalSP, formatPct(g.TotalSPPct),
 					iss.Key, truncate(iss.Summary, 50), iss.StoryPoints)
 			}
-			totalCountPct += g.CountPct
-			totalSPPct += g.TotalSPPct
 		}
 		fmt.Println("  " + repeat("-", 140))
 		fmt.Printf("  %-30s | %5s | %8s | %8s | %10s | %-12s | %-50s | %4s\n",
-			"Total", "", formatPct(totalCountPct), "", formatPct(totalSPPct), "", "", "")
+			"Total", "", formatPct(r.TotalLabeledCountPct), "", formatPct(r.TotalLabeledSPPct), "", "", "")
 		printUnlabeledConsole(r.UnlabeledIssues)
 	}
 }
