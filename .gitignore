@@ -23,6 +23,7 @@ go.work
 # IDE specific files
 .idea/
 .vscode/
+.codemie/
 *.swp
 *.swo
 
