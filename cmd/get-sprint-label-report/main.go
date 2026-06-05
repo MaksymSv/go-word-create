@@ -84,11 +84,35 @@ func formatPct(v float64) string {
 	return strconv.FormatFloat(v, 'f', 1, 64) + "%"
 }
 
+func shortFormatConfig() word.TableConfig {
+	cfg := word.DefaultConfig()
+	cfg.ColumnHeaders = []string{"Label", "Count", "Count,%", "Total SP", "Total SP,%"}
+	cfg.ColumnWidths = []float64{25, 10, 10, 10, 10}
+	cfg.CenterColumns = []int{1, 2, 3, 4}
+	return cfg
+}
+
+func fullFormatConfig() word.TableConfig {
+	cfg := word.DefaultConfig()
+	cfg.ColumnHeaders = []string{"Label", "Count", "Count,%", "Total SP", "Total SP,%", "Key", "Summary", "SP"}
+	cfg.ColumnWidths = []float64{13, 6, 6, 6, 6, 10, 47, 6}
+	cfg.CenterColumns = []int{1, 2, 3, 4, 7}
+	return cfg
+}
+
+func unlabeledConfig() word.TableConfig {
+	cfg := word.DefaultConfig()
+	cfg.ColumnHeaders = []string{"Key", "Summary", "SP"}
+	cfg.ColumnWidths = []float64{13, 78, 9}
+	cfg.CenterColumns = []int{0, 2}
+	return cfg
+}
+
 func renderShortFormatDoc(doc *word.Doc, reports []labelreport.ComponentReport) {
 	for _, r := range reports {
 		doc.AddHeading(1, r.ComponentName)
-		t := word.NewTable(&doc.WordDocument)
-		t.AddHeaderRow([]string{"Label", "Count", "Count,%", "Total SP", "Total SP,%"})
+		t := word.NewTable(&doc.WordDocument, shortFormatConfig())
+		t.AddHeaderRow()
 		for _, g := range r.LabelGroups {
 			t.AddDataRow([]string{
 				g.LabelName,
@@ -106,8 +130,8 @@ func renderShortFormatDoc(doc *word.Doc, reports []labelreport.ComponentReport) 
 func renderFullFormatDoc(doc *word.Doc, reports []labelreport.ComponentReport) {
 	for _, r := range reports {
 		doc.AddHeading(1, r.ComponentName)
-		t := word.NewTable(&doc.WordDocument)
-		t.AddHeaderRow([]string{"Label", "Count", "Count,%", "Total SP", "Total SP,%", "Key", "Summary", "SP"})
+		t := word.NewTable(&doc.WordDocument, fullFormatConfig())
+		t.AddHeaderRow()
 		for _, g := range r.LabelGroups {
 			if len(g.Issues) == 0 {
 				t.AddDataRow([]string{g.LabelName, "0", formatPct(g.CountPct), "0.0", formatPct(g.TotalSPPct), "", "", ""})
@@ -136,8 +160,8 @@ func appendUnlabeledTable(doc *word.Doc, issues []jiraservice.Issue) {
 		return
 	}
 	doc.AddHeading(2, "Unlabeled Issues")
-	t := word.NewTable(&doc.WordDocument)
-	t.AddHeaderRow([]string{"Key", "Summary", "SP"})
+	t := word.NewTable(&doc.WordDocument, unlabeledConfig())
+	t.AddHeaderRow()
 	for _, iss := range issues {
 		t.AddDataRow([]string{
 			iss.Key,

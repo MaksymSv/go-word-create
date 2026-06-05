@@ -22,11 +22,10 @@ func (h *Handler) GetDocument(w http.ResponseWriter, r *http.Request) {
 	doc := word.NewDocument()
 
 	// Create a new table
-	table := word.NewTable(&doc.WordDocument)
-
-	// Add header row
-	headers := []string{"types", "id", "name", "epic", "SP"}
-	table.AddHeaderRow(headers)
+	cfg := word.DefaultConfig()
+	cfg.ColumnHeaders = []string{"types", "id", "name", "epic", "SP"}
+	table := word.NewTable(&doc.WordDocument, cfg)
+	table.AddHeaderRow()
 
 	// Add sample data rows
 	data := [][]string{

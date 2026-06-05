@@ -147,14 +147,10 @@ func logIssuesTable(header string, lines []jiraservice.Issue) {
 }
 
 func addTableToDocument(doc *word.Doc, headingText string, tableContent []jiraservice.Issue) {
-
-	// Headers
-	headers := []string{"Type", "ID", "Description", "Epic", "SP"}
-
 	doc.AddHeading(1, headingText)
 
-	closedIssuesTable := word.NewTable(&doc.WordDocument)
-	closedIssuesTable.AddHeaderRow(headers)
+	closedIssuesTable := word.NewTable(&doc.WordDocument, word.DefaultConfig())
+	closedIssuesTable.AddHeaderRow()
 
 	// Add issue rows
 	for _, issue := range tableContent {
