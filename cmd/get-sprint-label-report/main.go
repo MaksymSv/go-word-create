@@ -44,9 +44,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, cfg.BoardName, *sprintName, nil)
+	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, *sprintName, cfg.GetAllBoardNames(), cfg.JiraIssueTypes)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: sprint %q on board %q: %v\n", *sprintName, cfg.BoardName, err)
+		fmt.Fprintf(os.Stderr, "Error: sprint %q: %v\n", *sprintName, err)
 		os.Exit(1)
 	}
 

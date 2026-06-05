@@ -47,7 +47,7 @@ func main() {
 	}
 
 	// Get issues from sprint
-	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, cfg.BoardName, *sprintName, []string{"Bug", "Feature", "Task"})
+	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, *sprintName, cfg.GetAllBoardNames(), cfg.JiraIssueTypes)
 	if err != nil {
 		log.Fatalf("Failed to get sprint issues: %v", err)
 	}
