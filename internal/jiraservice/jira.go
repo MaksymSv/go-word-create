@@ -137,30 +137,11 @@ func (s *JiraService) GetAllBoardIssues(projectKey, boardName string, issuesType
 	return allMonthsIssues, nil
 }
 
-func (s *JiraService) GetSprintIssues(projectKey, boardName, sprintName string, issuesTypes []string) ([]Issue, error) {
-	// First, find the board ID
-	board, err := s.GetBoard(boardName)
+func (s *JiraService) GetSprintIssues(projectKey, sprintName string, boardNames, issuesTypes []string) ([]Issue, error) {
+
+	targetSprint, err := s.FindSprintInBoards(boardNames, sprintName)
 	if err != nil {
-		return nil, err
-	}
-
-	boardID := strconv.Itoa(board.ID)
-	log.Printf("Found board '%s' with ID %s", boardName, boardID)
-
-	// Get all sprints for the board
-	sprints, _, err := s.client.Board.GetAllSprints(boardID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get sprints: %w", err)
-	}
-
-	log.Printf("Found %d sprints for board '%s'", len(sprints), boardName)
-
-	var targetSprint *jira.Sprint
-	for _, sprint := range sprints {
-		if sprint.Name == sprintName {
-			targetSprint = &sprint
-			break
-		}
+		return nil, fmt.Errorf("Failed to find sprint %q: %w", sprintName, err)
 	}
 
 	if targetSprint == nil {
@@ -184,6 +165,33 @@ func (s *JiraService) GetSprintIssues(projectKey, boardName, sprintName string, 
 	}
 
 	return result, nil
+}
+
+func (s *JiraService) FindSprintInBoards(boardNames []string, sprintName string) (*jira.Sprint, error) {
+	for _, boardName := range boardNames {
+		board, err := s.GetBoard(boardName)
+		if err != nil {
+			log.Printf("Warning: failed to get board '%s': %v", boardName, err)
+			continue
+		}
+
+		boardID := strconv.Itoa(board.ID)
+		log.Printf("Searching for sprint '%s' in board '%s' (ID %s)", sprintName, boardName, boardID)
+
+		sprints, _, err := s.client.Board.GetAllSprints(boardID)
+		if err != nil {
+			log.Printf("Warning: failed to get sprints for board '%s': %v", boardName, err)
+			continue
+		}
+
+		for _, sprint := range sprints {
+			if sprint.Name == sprintName {
+				return &sprint, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("sprint '%s' not found in any of the provided boards", sprintName)
 }
 
 func (s *JiraService) LoadIssuesFromSprint(sprintId int, epicNames map[string]string, typeFilter map[string]struct{}) ([]Issue, error) {

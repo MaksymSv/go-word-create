@@ -68,11 +68,11 @@ func main() {
 	totalIssuesCount := 0
 
 	for _, team := range cfg.Teams {
-		log.Printf("Fetching issues for team/component '%s'", team)
+		log.Printf("Fetching issues for team/component '%s'", team.ComponentName)
 
-		issuesForTeam, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, team, monthStart, monthEnd, []string{"Bug", "Story", "Task"})
+		issuesForTeam, err := jiraService.GetIssuesInProgressDuringMonth(cfg.ProjectKey, team.ComponentName, monthStart, monthEnd, cfg.JiraIssueTypes)
 		if err != nil {
-			log.Fatalf("Failed to get issues in progress for team '%s': %v", team, err)
+			log.Fatalf("Failed to get issues in progress for team '%s': %v", team.ComponentName, err)
 		}
 
 		totalIssuesCount += len(issuesForTeam)
@@ -88,7 +88,7 @@ func main() {
 			}
 		}
 
-		teamIssues[team] = TeamIssues{
+		teamIssues[team.ComponentName] = TeamIssues{
 			Closed: closedForTeam,
 			Open:   openForTeam,
 		}
@@ -99,13 +99,13 @@ func main() {
 		log.Printf("Found %d issues in 'In Progress' during %s across %d teams\n", totalIssuesCount, *month, len(cfg.Teams))
 
 		for _, team := range cfg.Teams {
-			ti, ok := teamIssues[team]
+			ti, ok := teamIssues[team.ComponentName]
 			if !ok {
 				continue
 			}
 
-			logIssuesTable(fmt.Sprintf("\nClosed Issues for team %s (%d):", team, len(ti.Closed)), ti.Closed)
-			logIssuesTable(fmt.Sprintf("\nOpen Issues for team %s (%d):", team, len(ti.Open)), ti.Open)
+			logIssuesTable(fmt.Sprintf("\nClosed Issues for team %s (%d):", team.ComponentName, len(ti.Closed)), ti.Closed)
+			logIssuesTable(fmt.Sprintf("\nOpen Issues for team %s (%d):", team.ComponentName, len(ti.Open)), ti.Open)
 		}
 
 		log.Printf("\nTotal issues across all teams: %d\n", totalIssuesCount)
@@ -114,13 +114,13 @@ func main() {
 		doc := word.NewDocument()
 
 		for _, team := range cfg.Teams {
-			ti, ok := teamIssues[team]
+			ti, ok := teamIssues[team.ComponentName]
 			if !ok {
 				continue
 			}
 
-			addTableToDocument(doc, fmt.Sprintf("Closed Issues During %s (%s)", monthStart.Format("January 2006"), team), ti.Closed)
-			addTableToDocument(doc, fmt.Sprintf("Issues were in work but not Closed during %s (%s)", monthStart.Format("January 2006"), team), ti.Open)
+			addTableToDocument(doc, fmt.Sprintf("Closed Issues During %s (%s)", monthStart.Format("January 2006"), team.ComponentName), ti.Closed)
+			addTableToDocument(doc, fmt.Sprintf("Issues were in work but not Closed during %s (%s)", monthStart.Format("January 2006"), team.ComponentName), ti.Open)
 		}
 
 		// output file has format some_file.docx. Insert formatted date "yyyy-mm" before .docx
