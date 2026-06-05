@@ -4,22 +4,21 @@ A Go project that generates Word documents from Jira issues. Supports fetching i
 
 ## Project Overview
 
-This project provides multiple command-line tools to fetch Jira issues and generate Word documents:
+This project provides command-line tools to fetch Jira issues and generate Word documents:
 
-- **Server**: HTTP server for generating Word documents on demand
-- **Get Sprint Issues**: Fetch all issues from a specific sprint and export to Word
 - **Get Month Issues**: Fetch all issues that were "In Progress" during a specific month, grouped by team/component, and export to Word
+- **Get Sprint Issues**: Fetch all issues from a specific sprint and export to Word
+- **Get Sprint Label Report**: Fetch sprint issues and generate a label/AI-usage report across all configured teams
 
 ## Features
 
 - 📊 **Jira Integration**: Connect to Jira Cloud to fetch issues, sprints, and epic information
 - 📄 **Word Document Generation**: Create formatted Word documents with tables containing issue details
 - 🔍 **Issue Filtering**: Filter by issue type (Bug, Feature, Task, etc.)
-- 👥 **Multi-Team Support**: Process multiple teams/components configured in `TEAMS` environment variable
-- 🏷️ **Component Filtering**: Filter issues by Jira Components (team names) for precise reporting
+- 👥 **Multi-Team Support**: Process multiple teams/components via the `TEAMS` environment variable
+- 🏷️ **Component Filtering**: Filter issues by Jira Components for precise reporting
 - 📅 **Month-based Filtering**: Find all issues that transitioned to "In Progress" during a specific month
-- 🖥️ **HTTP Server**: REST API for on-demand document generation
-- 🎨 **Formatted Tables**: Custom fonts (Aptos Narrow, size 8), proper margins, and styling
+- 🎨 **Formatted Tables**: Custom fonts (Aptos Narrow, 8pt), proper margins, and styled headers
 
 ## Prerequisites
 
@@ -50,12 +49,11 @@ cp .env.example .env
 JIRA_URL=https://your-jira-instance.atlassian.net
 JIRA_USERNAME=your-email@example.com
 JIRA_API_TOKEN=your-api-token
-JIRA_BOARD_NAME=Your Board Name
 JIRA_PROJECT_KEY=PROJ
 JIRA_EPIC_FIELD=customfield_10014
 JIRA_SP_FIELD=customfield_10015
 JIRA_COMPONENT_FIELD=components
-TEAMS=PROCESSING,STABLETEK
+TEAMS=PROCESSING|"PROCESSING Team",STABLETEK|"STABLETEK Team"
 OUTPUT_FILE=output.docx
 ```
 
@@ -84,17 +82,15 @@ Look for `customfield_XXXXX` entries for Epic Link and Story Points fields.
 make build
 
 # Build specific binary
-make build-server
 make build-month
 make build-sprint
-make build-web
-make build-ui
+make build-sprint-label-report
 
 # Run commands
 make run-month MONTH=2025.10              # Generate Word document
 make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
-make run-web                               # Build UI and run web server
-make dev-ui                                # Start React dev server
+make run-sprint-label-report SPRINT="Sprint 16"
+make run-sprint-label-report SPRINT="Sprint 16" FORMAT=full LOGONLY=1
 
 # Show all available targets
 make help
@@ -103,31 +99,17 @@ make help
 ### Using Go directly
 
 ```bash
-# Build server
-go build -o bin/server ./cmd/server
-
 # Build month issues fetcher
 go build -o bin/get-month-issues ./cmd/get-month-issues-from-jira
 
 # Build sprint issues fetcher
 go build -o bin/get-sprint-issues ./cmd/get-sprint-issues-from-jira
+
+# Build sprint label report
+go build -o bin/get-sprint-label-report ./cmd/get-sprint-label-report
 ```
 
 ## Running
-
-### Server
-
-Start the HTTP server (default port 8080):
-```bash
-make run
-```
-
-Or run directly:
-```bash
-./bin/server
-```
-
-The server will respond to HTTP requests for document generation.
 
 ### Get Month Issues
 
@@ -165,24 +147,42 @@ Fetch all issues from a specific sprint:
 ./bin/get-sprint-issues -sprint="Sprint 16" -output="sprint-16.docx"
 ```
 
+Uses the board name from the first team entry in `TEAMS`.
+
 #### Flags:
 - `-sprint="Sprint Name"` (required): Sprint name to fetch issues from
 - `-output="file.docx"` (optional): Output file name (default: from .env)
 - `-debug`: Print issues to console instead of generating Word document
+
+### Get Sprint Label Report
+
+Generate a label/AI-usage report for a sprint, covering all teams configured in `TEAMS`:
+```bash
+./bin/get-sprint-label-report -sprint="Sprint 16" -output="label-report.docx"
+```
+
+#### Flags:
+- `-sprint="Sprint Name"` (required): Sprint name
+- `-output="file.docx"` (optional): Output file name
+- `-format="short|full"` (optional, default `short`): Report format
+- `-debug`: Print report to console instead of generating Word document
+
+#### How it works:
+Iterates over every team in `TEAMS`, fetches sprint issues from each board, and produces a combined document with one labeled section per team. If one board fails, that team is skipped with an error message and the remaining teams are still processed.
 
 ## Project Structure
 
 ```
 go-word-create/
 ├── cmd/
-│   ├── server/              # HTTP server
 │   ├── get-sprint-issues-from-jira/   # Sprint issues fetcher
-│   └── get-month-issues-from-jira/    # Month issues fetcher
+│   ├── get-month-issues-from-jira/    # Month issues fetcher
+│   └── get-sprint-label-report/       # Sprint label report
 ├── internal/
 │   ├── config/              # Configuration loading from .env
 │   ├── jiraservice/         # Jira API client and issue fetching
-│   ├── server/              # HTTP handler
-│   └── word/                # Word document generation, table formatting utilities
+│   ├── labelreport/         # Label aggregation logic
+│   └── word/                # Word document generation and table formatting
 ├── go.mod                   # Go module definition
 ├── .env.example             # Example environment variables
 ├── Makefile                 # Build automation
@@ -223,24 +223,25 @@ make clean
 
 The project uses these Jira fields, which can be configured via `.env`:
 
-1. **Epic Link** (`JIRA_EPIC_FIELD`, default: `customfield_10014`): Links issues to epics
-2. **Story Points** (`JIRA_SP_FIELD`, default: `customfield_10015`): Stores story point estimates
+1. **Epic Link** (`JIRA_EPIC_FIELD`, default: `customfield_14500`): Links issues to epics
+2. **Story Points** (`JIRA_SP_FIELD`, default: `customfield_10004`): Stores story point estimates
 3. **Components** (`JIRA_COMPONENT_FIELD`, default: `components`): Jira components field name or custom field ID
 
 These IDs/names may vary in your Jira instance. Use the API endpoint mentioned above to find the correct values.
 
-### Teams configuration
+### Teams Configuration
 
-The `TEAMS` environment variable configures which teams/components are processed by the month issues command:
+The `TEAMS` environment variable configures teams using the format `COMPONENT_NAME|"Board Display Name"`, comma-separated:
 
-- **TEAMS** (required): A comma-separated list of team/component names (e.g., `PROCESSING,STABLETEK`).  
-  - Each team name should match a Jira Component name exactly (case-insensitive matching)
-  - The month command will fetch and group issues separately for each team
-  - Issues are filtered by matching the team name against the issue's Components field in Jira
+```env
+TEAMS=PROCESSING|"PROCESSING Team",STABLETEK|"STABLETEK Team"
+```
 
-In code this is available as a Go slice `cfg.Teams` (e.g., `[]string{"PROCESSING", "STABLETEK"}`).
+- **Component name** (before `|`): must match the Jira Component name exactly; used to filter issues in month reports
+- **Board display name** (after `|`, optional quotes): used for sprint board lookups
+- If no `|` separator is given, the component name is used as the board name
 
-**Note**: The team names in `TEAMS` must match the Component names in your Jira instance. Use the Jira UI or API to verify component names.
+In code this is available as `cfg.Teams` (`[]config.TeamEntry`), where each entry has `ComponentName` and `BoardName` fields.
 
 ### Output File Format
 
@@ -248,8 +249,8 @@ Generated Word documents include sections for each team configured in `TEAMS`:
 
 **For Month Issues Command:**
 - Each team gets two sections:
-  1. "Closed Issues During [Month] ([Team])" - Issues that were closed
-  2. "Issues were in work but not Closed during [Month] ([Team])" - Issues still open
+  1. "Closed Issues During [Month] ([Team])" — issues that were closed
+  2. "Issues were in work but not Closed during [Month] ([Team])" — issues still open
 
 **Table Columns:**
 - **Type**: Issue type (Bug, Feature, Task)
@@ -258,39 +259,30 @@ Generated Word documents include sections for each team configured in `TEAMS`:
 - **Epic**: Epic name the issue belongs to
 - **SP**: Story point estimate
 
-**Additional Issue Information:**
-- **Status**: Current issue status (available in debug mode)
-- **URL**: Direct link to the issue in Jira (available in code)
-
 ### Table Formatting
 
 Tables in generated documents use:
-- **Font**: Aptos Narrow
-- **Size**: 8pt
-- **Borders**: Single black borders
-- **Header**: Blue background (#365F91) with white text, bold
-- **Margins**: 0.2cm on all sides
+- **Font**: Aptos Narrow, 8pt
+- **Borders**: Single auto-color borders at 1pt
+- **Header**: Blue background (`#0070C0`) with white text
+- **Cell margins**: Top and bottom only (~1mm / 57 dxa)
 
 ## Troubleshooting
 
-### "Board not found" error
-- Check that `JIRA_BOARD_NAME` in `.env` matches your Jira board name exactly
-- Verify you have access to the board
-
 ### "Sprint not found" error
 - Ensure the sprint name matches exactly (case-sensitive)
-- Sprint must be associated with the board specified in `.env`
+- Sprint must be associated with the board configured in `TEAMS` for that team
 
 ### "Failed to search epics" error
 - Verify `JIRA_EPIC_FIELD` is correct for your Jira instance
 - Check that your Jira user has permission to view custom fields
 
 ### "required environment variable TEAMS is not set" error
-- Add `TEAMS=PROCESSING,STABLETEK` (or your team names) to your `.env` file
-- Ensure team names match Jira Component names exactly
+- Add `TEAMS=PROCESSING|"PROCESSING Team",STABLETEK|"STABLETEK Team"` (or your team entries) to your `.env` file
+- Ensure component names match Jira Component names exactly
 
 ### No issues found for a team
-- Verify the team name in `TEAMS` matches a Component name in Jira (check spelling and case)
+- Verify the component name in `TEAMS` matches a Component name in Jira (check spelling and case)
 - Ensure issues have the Component assigned in Jira
 - Check that issues were actually "In Progress" during the specified month
 - Use `-debug` flag to see detailed filtering information
