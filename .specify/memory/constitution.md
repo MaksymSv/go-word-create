@@ -73,9 +73,11 @@ Every generated Word document MUST conform to the project's formatting standard 
 output is predictable and visually uniform across all commands and teams.
 
 - **Font**: Aptos Narrow, 8 pt.
-- **Borders**: single black borders on all table cells.
-- **Header row**: blue background (`#365F91`), white bold text.
-- **Cell margins**: 0.2 cm on all sides.
+- **Borders**: single auto-color borders at 0,5pt on all table cells.
+- **Header row**: blue background (`#0070C0`), white text (not bold).
+- **Cell margins**: top and bottom = 0, left and right = 1.5mm.
+- **Section headings**: Heading 1 styled with Trebuchet MS, 16pt, small caps, character spacing 5 twips, paragraph spacing before 300 twips / after 40 twips.
+- **Page breaks**: a page break paragraph is inserted before every section heading after the first.
 - **Section structure** for month reports: one "Closed Issues" section and one "Open
   Issues" section per team, with headings that include the month and team name.
 - Changes to the formatting standard MUST be applied consistently across all

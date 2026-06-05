@@ -65,11 +65,11 @@ func main() {
 	} else {
 		// Create Word document
 		doc := word.NewDocument()
-		table := word.NewTable(&doc.WordDocument)
-
-		// Add header row
-		headers := []string{"Type", "Key", "Summary", "Epic", "Story Points"}
-		table.AddHeaderRow(headers)
+		cfg := word.DefaultConfig()
+		cfg.ColumnHeaders = []string{"Type", "Key", "Summary", "Epic", "Story Points"}
+		cfg.ColumnWidths = []float64{5.5, 10.0, 44.5, 34.5, 5.5}
+		table := word.NewTable(&doc.WordDocument, cfg)
+		table.AddHeaderRow()
 
 		// Add issue rows
 		for _, issue := range issues {
