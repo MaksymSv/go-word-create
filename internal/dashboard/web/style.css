@@ -1,0 +1,270 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #f4f5f7;
+  --color-text: #172b4d;
+  --color-text-muted: #5e6c84;
+  --color-border: #dfe1e6;
+  --color-btn-team: #e4e6ea;
+  --color-btn-team-text: #172b4d;
+  --color-btn-team-active-bg: #0052cc;
+  --color-btn-team-active-text: #ffffff;
+  --color-btn-sprint: #e4e6ea;
+  --color-btn-sprint-text: #172b4d;
+  --color-btn-sprint-active-bg: #0065ff;
+  --color-btn-sprint-active-text: #ffffff;
+  --color-btn-label-active-bg: #e3fcef;
+  --color-btn-label-active-text: #006644;
+  --color-btn-label-active-border: #abf5d1;
+  --color-btn-label-inactive-bg: #f4f5f7;
+  --color-btn-label-inactive-text: #5e6c84;
+  --color-btn-label-inactive-border: #dfe1e6;
+  --color-btn-label-pending-bg: #fffae6;
+  --color-btn-label-pending-border: #ffe380;
+  --color-error-bg: #ffebe6;
+  --color-error-text: #bf2600;
+  --color-error-border: #ff8f73;
+  --color-header-bg: #0052cc;
+  --color-header-text: #ffffff;
+  --color-row-hover: #f4f5f7;
+}
+
+[data-theme="dark"] {
+  --color-bg: #1e1e2e;
+  --color-surface: #313244;
+  --color-text: #cdd6f4;
+  --color-text-muted: #a6adc8;
+  --color-border: #45475a;
+  --color-btn-team: #313244;
+  --color-btn-team-text: #cdd6f4;
+  --color-btn-team-active-bg: #89b4fa;
+  --color-btn-team-active-text: #1e1e2e;
+  --color-btn-sprint: #313244;
+  --color-btn-sprint-text: #cdd6f4;
+  --color-btn-sprint-active-bg: #89dceb;
+  --color-btn-sprint-active-text: #1e1e2e;
+  --color-btn-label-active-bg: #1e3a2f;
+  --color-btn-label-active-text: #a6e3a1;
+  --color-btn-label-active-border: #40a02b;
+  --color-btn-label-inactive-bg: #313244;
+  --color-btn-label-inactive-text: #a6adc8;
+  --color-btn-label-inactive-border: #45475a;
+  --color-btn-label-pending-bg: #3d3520;
+  --color-btn-label-pending-border: #f9e2af;
+  --color-error-bg: #3d1a1a;
+  --color-error-text: #f38ba8;
+  --color-error-border: #e64553;
+  --color-header-bg: #313244;
+  --color-header-text: #cdd6f4;
+  --color-row-hover: #313244;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Toolbar ── */
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#team-section,
+#sprint-section {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+#sprint-section {
+  border-left: 1px solid var(--color-border);
+  padding-left: 8px;
+}
+
+#theme-toggle {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--color-text);
+  transition: background-color 0.15s;
+}
+
+#theme-toggle:hover {
+  background-color: var(--color-btn-team);
+}
+
+/* ── Buttons ── */
+button {
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  border-radius: 4px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn-team {
+  background-color: var(--color-btn-team);
+  color: var(--color-btn-team-text);
+  border-color: var(--color-border);
+}
+
+.btn-team:hover {
+  filter: brightness(0.94);
+}
+
+.btn-team.active {
+  background-color: var(--color-btn-team-active-bg);
+  color: var(--color-btn-team-active-text);
+  border-color: var(--color-btn-team-active-bg);
+}
+
+.btn-sprint {
+  background-color: var(--color-btn-sprint);
+  color: var(--color-btn-sprint-text);
+  border-color: var(--color-border);
+  font-size: 12px;
+}
+
+.btn-sprint:hover {
+  filter: brightness(0.94);
+}
+
+.btn-sprint.active {
+  background-color: var(--color-btn-sprint-active-bg);
+  color: var(--color-btn-sprint-active-text);
+  border-color: var(--color-btn-sprint-active-bg);
+}
+
+.btn-label {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background-color: var(--color-btn-label-inactive-bg);
+  color: var(--color-btn-label-inactive-text);
+  border-color: var(--color-btn-label-inactive-border);
+}
+
+.btn-label.active {
+  background-color: var(--color-btn-label-active-bg);
+  color: var(--color-btn-label-active-text);
+  border-color: var(--color-btn-label-active-border);
+}
+
+.btn-label.pending {
+  background-color: var(--color-btn-label-pending-bg);
+  border-color: var(--color-btn-label-pending-border);
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/* ── Main area ── */
+#main-area {
+  padding: 16px;
+}
+
+/* ── Error banner ── */
+#error-banner {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+  border: 1px solid var(--color-error-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+/* ── Issue table ── */
+#content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+#content th,
+#content td {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+#content thead tr {
+  background-color: var(--color-header-bg);
+  color: var(--color-header-text);
+}
+
+#content thead th {
+  border-color: var(--color-header-bg);
+  font-weight: 600;
+}
+
+#content tbody tr:hover {
+  background-color: var(--color-row-hover);
+}
+
+.issue-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+.issue-key-link {
+  color: var(--color-btn-sprint-active-bg);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.issue-key-link:hover {
+  text-decoration: underline;
+}
+
+.labels-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.sp-value {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+/* ── Empty / loading states ── */
+.empty-state {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 48px 0;
+  font-size: 14px;
+}
+
+.loading-state {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 48px 0;
+  font-size: 14px;
+}

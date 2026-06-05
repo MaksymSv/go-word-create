@@ -3,6 +3,7 @@ package jiraservice
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -311,6 +312,67 @@ func createFilterMap(issuesTypes []string) map[string]struct{} {
 	}
 
 	return typeFilter
+}
+
+// GetSprintsForBoard returns up to `limit` most recent active/closed sprints for
+// the named board, sorted newest first (by sprint ID descending).
+func (s *JiraService) GetSprintsForBoard(boardName string, limit int) ([]jira.Sprint, error) {
+	board, err := s.GetBoard(boardName)
+	if err != nil {
+		return nil, err
+	}
+	boardID := board.ID
+
+	var allSprints []jira.Sprint
+	startAt := 0
+	pageSize := 50
+	for {
+		list, _, err := s.client.Board.GetAllSprintsWithOptions(boardID, &jira.GetAllSprintsOptions{
+			State: "active,closed",
+			SearchOptions: jira.SearchOptions{
+				StartAt:    startAt,
+				MaxResults: pageSize,
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get sprints for board %q: %w", boardName, err)
+		}
+		allSprints = append(allSprints, list.Values...)
+		if list.IsLast {
+			break
+		}
+		startAt += pageSize
+	}
+
+	// Sort by ID descending (newest first)
+	sort.Slice(allSprints, func(i, j int) bool {
+		return allSprints[i].ID > allSprints[j].ID
+	})
+
+	if limit > 0 && len(allSprints) > limit {
+		allSprints = allSprints[:limit]
+	}
+	return allSprints, nil
+}
+
+// UpdateIssueLabel adds or removes a single label on the given Jira issue.
+func (s *JiraService) UpdateIssueLabel(issueKey, label string, add bool) error {
+	op := "remove"
+	if add {
+		op = "add"
+	}
+	payload := map[string]interface{}{
+		"update": map[string]interface{}{
+			"labels": []map[string]string{
+				{op: label},
+			},
+		},
+	}
+	_, err := s.client.Issue.UpdateIssue(issueKey, payload)
+	if err != nil {
+		return fmt.Errorf("failed to %s label %q on issue %s: %w", op, label, issueKey, err)
+	}
+	return nil
 }
 
 // GetIssuesInProgressDuringMonth returns issues that were in 'In Progress' status
