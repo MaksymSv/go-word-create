@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/004-teams-board-config/plan.md
+at specs/005-web-sprint-labels-dashboard/plan.md
 <!-- SPECKIT END -->

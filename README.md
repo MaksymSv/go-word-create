@@ -1,22 +1,24 @@
 # Go Word Create
 
-A Go project that generates Word documents from Jira issues. Supports fetching issues by sprint or by month, with filtering by issue type and team/component.
+A Go project that integrates with Jira to generate Word reports and serve a web dashboard for sprint label management.
 
 ## Project Overview
 
-This project provides command-line tools to fetch Jira issues and generate Word documents:
+This project provides command-line tools and a web dashboard for Jira issue reporting:
 
 - **Get Month Issues**: Fetch all issues that were "In Progress" during a specific month, grouped by team/component, and export to Word
 - **Get Sprint Issues**: Fetch all issues from a specific sprint and export to Word
 - **Get Sprint Label Report**: Fetch sprint issues and generate a label/AI-usage report across all configured teams
+- **Web Sprint Labels Dashboard**: Browser dashboard to browse sprint issues per team and toggle Jira labels directly from the UI
 
 ## Features
 
 - 📊 **Jira Integration**: Connect to Jira Cloud to fetch issues, sprints, and epic information
 - 📄 **Word Document Generation**: Create formatted Word documents with tables containing issue details
+- 🌐 **Web Dashboard**: Browser-based sprint issues viewer with live label assignment
 - 🔍 **Issue Filtering**: Filter by issue type (Bug, Feature, Task, etc.)
 - 👥 **Multi-Team Support**: Process multiple teams/components via the `TEAMS` environment variable
-- 🏷️ **Component Filtering**: Filter issues by Jira Components for precise reporting
+- 🏷️ **Label Management**: View and toggle configured labels on Jira issues from the dashboard
 - 📅 **Month-based Filtering**: Find all issues that transitioned to "In Progress" during a specific month
 - 🎨 **Formatted Tables**: Custom fonts (Aptos Narrow, 8pt), proper margins, and styled headers
 
@@ -85,12 +87,15 @@ make build
 make build-month
 make build-sprint
 make build-sprint-label-report
+make build-web-dashboard
 
 # Run commands
 make run-month MONTH=2025.10              # Generate Word document
 make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
 make run-sprint-label-report SPRINT="Sprint 16"
 make run-sprint-label-report SPRINT="Sprint 16" FORMAT=full LOGONLY=1
+make run-web-dashboard                    # Start dashboard on port 8080
+make run-web-dashboard PORT=9090          # Start dashboard on custom port
 
 # Show all available targets
 make help
@@ -107,6 +112,9 @@ go build -o bin/get-sprint-issues ./cmd/get-sprint-issues-from-jira
 
 # Build sprint label report
 go build -o bin/get-sprint-label-report ./cmd/get-sprint-label-report
+
+# Build web dashboard
+go build -o bin/web-sprint-labels-report ./cmd/web-sprint-labels-report
 ```
 
 ## Running
@@ -170,6 +178,31 @@ Generate a label/AI-usage report for a sprint, covering all teams configured in 
 #### How it works:
 Iterates over every team in `TEAMS`, fetches sprint issues from each board, and produces a combined document with one labeled section per team. If one board fails, that team is skipped with an error message and the remaining teams are still processed.
 
+### Web Sprint Labels Dashboard
+
+Start a browser dashboard showing sprint issues per team, with label-toggle buttons that write back to Jira:
+
+```bash
+make run-web-dashboard [PORT=8080]
+```
+
+Or run directly:
+```bash
+./bin/web-sprint-labels-report -port 8080
+```
+
+Then open `http://localhost:8080` in a browser.
+
+#### Flags:
+- `-port=8080` (optional): HTTP listen port (default 8080)
+- `-debug`: Enable verbose logging
+
+#### Features:
+- Team selector buttons load the 5 most recent sprints for each configured board
+- Sprint table shows: issue type icon, issue key (Jira link), summary, epic, story points, status, and label buttons
+- Clicking a label button adds or removes that label on the Jira issue instantly
+- Dark/light theme toggle at the far right of the toolbar; theme is remembered across sessions
+
 ## Project Structure
 
 ```
@@ -177,9 +210,11 @@ go-word-create/
 ├── cmd/
 │   ├── get-sprint-issues-from-jira/   # Sprint issues fetcher
 │   ├── get-month-issues-from-jira/    # Month issues fetcher
-│   └── get-sprint-label-report/       # Sprint label report
+│   ├── get-sprint-label-report/       # Sprint label report
+│   └── web-sprint-labels-report/      # Web dashboard server
 ├── internal/
 │   ├── config/              # Configuration loading from .env
+│   ├── dashboard/           # Web dashboard HTTP handlers and embedded SPA
 │   ├── jiraservice/         # Jira API client and issue fetching
 │   ├── labelreport/         # Label aggregation logic
 │   └── word/                # Word document generation and table formatting
@@ -291,6 +326,19 @@ Tables in generated documents use:
 - Check that the output directory exists and is writable
 - Ensure there's enough disk space
 - Verify the output filename doesn't conflict with an open file
+
+### Dashboard shows no teams or "team not found"
+- Ensure `TEAMS` is set correctly in `.env` with the `COMP|"Board Name"` format
+- Component names in the URL are case-sensitive; they must match exactly what is in `TEAMS`
+
+### Dashboard sprint list is empty
+- Verify the board name in `TEAMS` matches the Jira board display name exactly
+- The board must have at least one active or closed sprint; future-only boards show no buttons
+
+### Label button click has no effect
+- Check the browser console and server logs for error details
+- Confirm `REPORT_LABELS` in `.env` includes the label you are trying to assign
+- Verify your Jira API token has edit permissions on the issue
 
 ## Dependencies
 
