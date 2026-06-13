@@ -28,6 +28,7 @@ type Issue struct {
 	URL         string
 	Labels      []string
 	Components  []string
+	Implementer string
 }
 
 func NewJiraService(baseURL, username, password, epicField, spField string) (*JiraService, error) {
@@ -142,7 +143,7 @@ func (s *JiraService) GetSprintIssues(projectKey, sprintName string, boardNames,
 
 	targetSprint, err := s.FindSprintInBoards(boardNames, sprintName)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to find sprint %q: %w", sprintName, err)
+		return nil, fmt.Errorf("failed to find sprint %q: %w", sprintName, err)
 	}
 
 	if targetSprint == nil {
@@ -312,6 +313,87 @@ func createFilterMap(issuesTypes []string) map[string]struct{} {
 	}
 
 	return typeFilter
+}
+
+// resolveImplementer returns the display name of the assignee at the first "In
+// Review." status transition in the issue's changelog. Falls back to the
+// current assignee, then to an empty string.
+func resolveImplementer(issue jira.Issue) string {
+	if issue.Changelog == nil {
+		if issue.Fields.Assignee != nil {
+			return issue.Fields.Assignee.DisplayName
+		}
+		return ""
+	}
+
+	currentAssignee := ""
+	for _, history := range issue.Changelog.Histories {
+		// First pass within this entry: track latest assignee change.
+		for _, item := range history.Items {
+			if strings.EqualFold(item.Field, "assignee") {
+				currentAssignee = item.ToString
+			}
+		}
+		// Second pass: detect first transition to "In Review.".
+		for _, item := range history.Items {
+			if strings.EqualFold(item.Field, "status") &&
+				strings.EqualFold(item.ToString, "in review.") {
+				return currentAssignee
+			}
+		}
+	}
+
+	// Issue never reached "In Review." — use current assignee.
+	if issue.Fields.Assignee != nil {
+		return issue.Fields.Assignee.DisplayName
+	}
+	return ""
+}
+
+// GetIssuesFromSprintWithChangelog fetches all issues in a sprint (via JQL so
+// that changelog expansion is supported) and resolves the Implementer field for
+// each issue from the changelog.
+func (s *JiraService) GetIssuesFromSprintWithChangelog(sprintID int, epicNames map[string]string, typeFilter map[string]struct{}) ([]Issue, error) {
+	jql := fmt.Sprintf("sprint = %d ORDER BY created ASC", sprintID)
+	opts := &jira.SearchOptions{MaxResults: 1000, Expand: "changelog"}
+	jiraIssues, _, err := s.client.Issue.Search(jql, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch issues for sprint %d: %w", sprintID, err)
+	}
+
+	var result []Issue
+	for _, issue := range jiraIssues {
+		issueType := issue.Fields.Type.Name
+		if len(typeFilter) > 0 {
+			if _, ok := typeFilter[strings.ToLower(strings.TrimSpace(issueType))]; !ok {
+				continue
+			}
+		}
+
+		labels := make([]string, len(issue.Fields.Labels))
+		copy(labels, issue.Fields.Labels)
+
+		var components []string
+		for _, c := range issue.Fields.Components {
+			if c != nil {
+				components = append(components, c.Name)
+			}
+		}
+
+		result = append(result, Issue{
+			Key:         issue.Key,
+			Summary:     issue.Fields.Summary,
+			Epic:        getEpicName(issue, s.epicField, epicNames),
+			StoryPoints: getStoryPoints(issue, s.spField),
+			Type:        issueType,
+			Status:      issue.Fields.Status.Name,
+			URL:         fmt.Sprintf("%sbrowse/%s", s.url, issue.Key),
+			Labels:      labels,
+			Components:  components,
+			Implementer: resolveImplementer(issue),
+		})
+	}
+	return result, nil
 }
 
 // GetSprintsForBoard returns up to `limit` most recent active/closed sprints for

@@ -173,7 +173,7 @@ function renderTable(data) {
   // Header
   const thead = table.createTHead();
   const headerRow = thead.insertRow();
-  ['Type', 'Key', 'Summary', 'Epic', 'SP', 'Status', 'Labels'].forEach(col => {
+  ['Type', 'Key', 'Summary', 'Epic', 'Implementer', 'SP', 'Status', 'Labels'].forEach(col => {
     const th = document.createElement('th');
     th.textContent = col;
     headerRow.appendChild(th);
@@ -208,6 +208,9 @@ function renderTable(data) {
 
     // Epic
     tr.insertCell().textContent = issue.epic || '—';
+
+    // Implementer
+    tr.insertCell().textContent = issue.implementer || '—';
 
     // Story Points
     const spCell = tr.insertCell();

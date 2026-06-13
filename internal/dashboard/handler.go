@@ -100,7 +100,7 @@ func (h *DashboardHandler) getSprintIssues(w http.ResponseWriter, r *http.Reques
 		epicNames = make(map[string]string)
 	}
 
-	issues, err := h.jira.LoadIssuesFromSprint(sprintID, epicNames, nil)
+	issues, err := h.jira.GetIssuesFromSprintWithChangelog(sprintID, epicNames, nil)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, fmt.Sprintf("failed to load sprint issues (sprintID=%d): %v", sprintID, err))
 		return
@@ -123,6 +123,7 @@ func (h *DashboardHandler) getSprintIssues(w http.ResponseWriter, r *http.Reques
 			Key:          issue.Key,
 			Summary:      issue.Summary,
 			Epic:         issue.Epic,
+			Implementer:  issue.Implementer,
 			StoryPoints:  issue.StoryPoints,
 			Type:         issue.Type,
 			Status:       issue.Status,
