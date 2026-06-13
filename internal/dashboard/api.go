@@ -19,13 +19,14 @@ type SprintResponse struct {
 
 // DashboardIssue is a single issue row in the sprint table.
 type DashboardIssue struct {
-	Key         string   `json:"key"`
-	Summary     string   `json:"summary"`
-	Epic        string   `json:"epic"`
-	StoryPoints float64  `json:"storyPoints"`
-	Type        string   `json:"type"`
-	Status      string   `json:"status"`
-	URL         string   `json:"url"`
+	Key          string   `json:"key"`
+	Summary      string   `json:"summary"`
+	Epic         string   `json:"epic"`
+	Implementer  string   `json:"implementer"`
+	StoryPoints  float64  `json:"storyPoints"`
+	Type         string   `json:"type"`
+	Status       string   `json:"status"`
+	URL          string   `json:"url"`
 	ActiveLabels []string `json:"activeLabels"`
 }
 
