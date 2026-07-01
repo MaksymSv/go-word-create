@@ -254,6 +254,52 @@ button {
   font-size: 12px;
 }
 
+/* ── Status filter bar ── */
+#status-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 0px;
+  align-items: center;
+
+  border-left: 1px solid var(--color-border);
+  padding-left: 8px;  
+}
+
+#status-filter-bar > span {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-right: 4px;
+}
+
+.pill {
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-btn-sprint);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.pill:hover {
+  border-color: var(--color-btn-team-active);
+}
+
+.pill.active {
+  background: var(--color-btn-team-active-bg);
+  color: #fff;
+  border-color: var(--color-btn-team-active-bg);
+}
+
+/* ── Summary row ── */
+.summary-row td {
+  font-weight: 600;
+  font-size: 12px;
+  border-top: 2px solid var(--color-border);
+  padding: 6px 4px;
+}
+
 /* ── Empty / loading states ── */
 .empty-state {
   text-align: center;
@@ -267,4 +313,9 @@ button {
   color: var(--color-text-muted);
   padding: 48px 0;
   font-size: 14px;
+}
+
+/* ── Row filtering ── */
+.hidden {
+  display: none;
 }
