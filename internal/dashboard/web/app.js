@@ -227,7 +227,7 @@ function applyFilter() {
   } else {
     // Filter rows by status
     rows.forEach(row => {
-      const statusCell = row.cells[5]; // Status column (index 5)
+      const statusCell = row.cells[6]; // Status column (index 6)
       const statusText = statusCell.textContent;
 
       if (state.selectedStatuses.has(statusText)) {
@@ -284,7 +284,7 @@ function renderSummaryRow(filteredIssues, configuredLabels) {
 
   // Create the first cell with "Summary"
   const summaryCell = summaryRow.insertCell();
-  summaryCell.colSpan = 4;
+  summaryCell.colSpan = 5;
   summaryCell.textContent = 'Summary';
 
   // Create cells for each label
@@ -315,7 +315,7 @@ function renderSummaryRow(filteredIssues, configuredLabels) {
   configuredLabels.forEach(label => {
     const total = labelTotals[label] || { count: 0, totalSP: 0 };
     const labelDiv = document.createElement('div');
-    labelDiv.textContent = `${label}: ${total.count} / ${total.totalSP}`;
+    labelDiv.textContent = `${label}: ${total.count} (${total.totalSP} SP)`;
     labelDiv.style.fontSize = '12px';
     labelDiv.style.fontWeight = '600';
     labelDivs.appendChild(labelDiv);
