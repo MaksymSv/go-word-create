@@ -248,7 +248,7 @@ func TestResolveImplementer(t *testing.T) {
 						items("status", "Ready for QA"),
 						items("status", "In QA"),
 						items("status", "In Progress"), // bug found, returned
-						items("status", "In Review."), // second — ignored
+						items("status", "In Review."),  // second — ignored
 					),
 				},
 			},
@@ -265,7 +265,7 @@ func TestResolveImplementer(t *testing.T) {
 						items("status", "Ready for QA"),
 						items("status", "In QA"),
 						items("assignee", "Bob", "status", "In Progress"), // reassigned after bug
-						items("status", "In Review."), // Bob's review — ignored
+						items("status", "In Review."),                     // Bob's review — ignored
 					),
 				},
 			},

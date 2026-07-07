@@ -93,7 +93,8 @@ make build-web-dashboard
 make run-month MONTH=2025.10              # Generate Word document
 make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
 make run-sprint-label-report SPRINT="Sprint 16"
-make run-sprint-label-report SPRINT="Sprint 16" FORMAT=full LOGONLY=1
+make run-sprint-label-report SPRINT="Sprint 16" FORMAT=full
+make run-sprint-label-report SPRINT="Sprint 16,Sprint17"
 make run-web-dashboard                    # Start dashboard on port 8080
 make run-web-dashboard PORT=9090          # Start dashboard on custom port
 
@@ -166,17 +167,15 @@ Uses the board name from the first team entry in `TEAMS`.
 
 Generate a label/AI-usage report for a sprint, covering all teams configured in `TEAMS`:
 ```bash
-./bin/get-sprint-label-report -sprint="Sprint 16" -output="label-report.docx"
+./bin/get-sprint-label-report -sprint="Sprint 16"
 ```
 
 #### Flags:
-- `-sprint="Sprint Name"` (required): Sprint name
-- `-output="file.docx"` (optional): Output file name
+- `-sprint="Sprint Name"` (required): Sprint name, comma separatred list of sprints is accepted
 - `-format="short|full"` (optional, default `short`): Report format
-- `-debug`: Print report to console instead of generating Word document
 
 #### How it works:
-Iterates over every team in `TEAMS`, fetches sprint issues from each board, and produces a combined document with one labeled section per team. If one board fails, that team is skipped with an error message and the remaining teams are still processed.
+Iterates over every team in `TEAMS`, fetches sprint issues from each board, and produces a combined report with one labeled section per team. If one board fails, that team is skipped with an error message and the remaining teams are still processed.
 
 ### Web Sprint Labels Dashboard
 

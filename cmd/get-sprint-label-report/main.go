@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 
 	"go-word-create/internal/config"
 	"go-word-create/internal/jiraservice"
@@ -33,6 +34,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	sprintNames, err := parseSprintNames(*sprintName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to parse -sprint: %v\n", err)
+		os.Exit(1)
+	}
+
 	jiraService, err := jiraservice.NewJiraService(
 		cfg.JiraURL, cfg.JiraUsername, cfg.JiraAPIToken, cfg.JiraEpicField, cfg.JiraSPField,
 	)
@@ -41,19 +48,43 @@ func main() {
 		os.Exit(1)
 	}
 
-	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, *sprintName, cfg.GetAllBoardNames(), cfg.JiraIssueTypes)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: sprint %q: %v\n", *sprintName, err)
-		os.Exit(1)
+	for _, sprint := range sprintNames {
+		issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, sprint, cfg.GetAllBoardNames(), cfg.JiraIssueTypes)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: sprint %q: %v\n", sprint, err)
+			os.Exit(1)
+		}
+
+		reports := labelreport.Aggregate(issues, cfg.ReportLabels)
+
+		if len(sprintNames) > 1 {
+			fmt.Printf("\n=== Sprint: %s ===\n", sprint)
+		}
+		if *format == "full" {
+			printFullFormatConsole(reports)
+		} else {
+			printShortFormatConsole(reports)
+		}
+	}
+}
+
+func parseSprintNames(raw string) ([]string, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, fmt.Errorf("sprint flag is empty")
 	}
 
-	reports := labelreport.Aggregate(issues, cfg.ReportLabels)
-
-	if *format == "full" {
-		printFullFormatConsole(reports)
-	} else {
-		printShortFormatConsole(reports)
+	parts := strings.Split(trimmed, ",")
+	sprintNames := make([]string, 0, len(parts))
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			return nil, fmt.Errorf("sprint list contains an empty sprint name")
+		}
+		sprintNames = append(sprintNames, name)
 	}
+
+	return sprintNames, nil
 }
 
 // --- Console renderers ---
