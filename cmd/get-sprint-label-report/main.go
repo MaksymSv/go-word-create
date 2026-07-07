@@ -91,9 +91,9 @@ func parseSprintNames(raw string) ([]string, error) {
 
 func formatPct(v float64) string {
 	if math.Trunc(v) == v {
-		return strconv.Itoa(int(v)) + "%"
+		return strconv.Itoa(int(v)) + " %"
 	}
-	return strconv.FormatFloat(v, 'f', 1, 64) + "%"
+	return strconv.FormatFloat(v, 'f', 0, 64) + " %"
 }
 
 // --- Console renderers ---
@@ -104,7 +104,7 @@ func printShortFormatConsole(reports []labelreport.ComponentReport) {
 		fmt.Printf("  %-35s | %5s | %8s | %8s | %10s\n", "Label", "Count", "Count,%", "Total SP", "Total SP,%")
 		fmt.Println("  " + repeat("-", 80))
 		for _, g := range r.LabelGroups {
-			fmt.Printf("  %-35s | %5d | %8s | %8.1f | %10s\n",
+			fmt.Printf("  %-35s | %5d | %8s | %8.0f | %10s\n",
 				g.LabelName, g.Count, formatPct(g.CountPct), g.TotalSP, formatPct(g.TotalSPPct))
 		}
 		fmt.Println("  " + repeat("-", 80))
@@ -119,7 +119,7 @@ func printFullFormatConsole(reports []labelreport.ComponentReport) {
 		fmt.Printf("\nComponent: %s\n", r.ComponentName)
 		fmt.Printf("  %-30s | %5s | %8s | %8s | %10s | %-13s | %-50s | %4s\n",
 			"Label", "Count", "Count,%", "Total SP", "Total SP,%", "Key", "Summary", "SP")
-		fmt.Println("  " + repeat("-", 140))
+		fmt.Println("  " + repeat("-", 150))
 		for _, g := range r.LabelGroups {
 			if len(g.Issues) == 0 {
 				fmt.Printf("  %-30s | %5d | %8s | %8.1f | %10s | %-13s | %-50s | %4s\n",
@@ -132,7 +132,7 @@ func printFullFormatConsole(reports []labelreport.ComponentReport) {
 					iss.Key, truncate(iss.Summary, 50), iss.StoryPoints)
 			}
 		}
-		fmt.Println("  " + repeat("-", 140))
+		fmt.Println("  " + repeat("-", 150))
 		fmt.Printf("  %-30s | %5s | %8s | %8s | %10s | %-13s | %-50s | %4s\n",
 			"Total", "", formatPct(r.TotalLabeledCountPct), "", formatPct(r.TotalLabeledSPPct), "", "", "")
 		printUnlabeledConsole(r.UnlabeledIssues)
@@ -144,10 +144,10 @@ func printUnlabeledConsole(issues []jiraservice.Issue) {
 		return
 	}
 	fmt.Printf("\n  Unlabeled Issues:\n")
-	fmt.Printf("  %-12s | %-60s | %4s\n", "Key", "Summary", "SP")
-	fmt.Println("  " + repeat("-", 83))
+	fmt.Printf("  %-13s | %-60s | %4s\n", "Key", "Summary", "SP")
+	fmt.Println("  " + repeat("-", 84))
 	for _, iss := range issues {
-		fmt.Printf("  %-12s | %-60s | %4.1f\n", iss.Key, truncate(iss.Summary, 60), iss.StoryPoints)
+		fmt.Printf("  %-13s | %-60s | %4.1f\n", iss.Key, truncate(iss.Summary, 60), iss.StoryPoints)
 	}
 }
 
