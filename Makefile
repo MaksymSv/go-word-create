@@ -56,10 +56,10 @@ build-web-dashboard:
 run-sprint-label-report: build-sprint-label-report
 	@if [ -z "$(SPRINT)" ]; then \
 		echo "Error: SPRINT parameter required"; \
-		echo "Usage: make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] [LOGONLY=1]"; \
+		echo "Usage: make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full]"; \
 		exit 1; \
 	fi
-	$(OUTPUT_DIR)/get-sprint-label-report -sprint="$(SPRINT)"$(if $(FORMAT), -format="$(FORMAT)")$(if $(LOGONLY), -debug)
+	$(OUTPUT_DIR)/get-sprint-label-report -sprint="$(SPRINT)"$(if $(FORMAT), -format="$(FORMAT)")
 
 # Run month issues fetcher
 run-month: build-month
