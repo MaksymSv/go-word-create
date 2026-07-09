@@ -16,7 +16,7 @@ help:
 	@echo "  make build-sprint-label-report          - Build sprint label report binary"
 	@echo "  make build-web-dashboard                - Build web sprint labels dashboard"
 	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
-	@echo "  make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] [LOGONLY=1] - Run sprint label report"
+	@echo "  make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] - Run sprint label report"
 	@echo "  make run-web-dashboard [PORT=8080]      - Start web sprint labels dashboard"
 	@echo "  make clean              - Remove build artifacts"
 	@echo "  make test               - Run tests"
