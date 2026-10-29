@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jira-reports": {
+      "command": "./bin/mcp-jira-reports",
+      "args": ["-workdir", "."]
+    }
+  }
+}

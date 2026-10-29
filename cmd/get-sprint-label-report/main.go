@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"strconv"
-	"strings"
 
 	"go-word-create/internal/config"
 	"go-word-create/internal/jiraservice"
@@ -34,7 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sprintNames, err := parseSprintNames(*sprintName)
+	sprintNames, err := jiraservice.ParseSprintNames(*sprintName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to parse -sprint: %v\n", err)
 		os.Exit(1)
@@ -66,25 +65,6 @@ func main() {
 			printShortFormatConsole(reports)
 		}
 	}
-}
-
-func parseSprintNames(raw string) ([]string, error) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return nil, fmt.Errorf("sprint flag is empty")
-	}
-
-	parts := strings.Split(trimmed, ",")
-	sprintNames := make([]string, 0, len(parts))
-	for _, part := range parts {
-		name := strings.TrimSpace(part)
-		if name == "" {
-			return nil, fmt.Errorf("sprint list contains an empty sprint name")
-		}
-		sprintNames = append(sprintNames, name)
-	}
-
-	return sprintNames, nil
 }
 
 // --- Console renderers ---

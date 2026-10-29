@@ -1,0 +1,1070 @@
+{
+  "providers": {
+    "codemie-proxy": {
+      "baseUrl": "http://localhost:51724/v1",
+      "api": "openai-completions",
+      "apiKey": "proxy-handled",
+      "compat": {
+        "supportsReasoningEffort": true,
+        "thinkingFormat": "reasoning_effort"
+      },
+      "models": [
+        {
+          "id": "gpt-4.1",
+          "name": "GPT-4.1 2025-04-14",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 32768,
+          "cost": {
+            "input": 2,
+            "output": 8,
+            "cacheRead": 0.5,
+            "cacheWrite": 2
+          }
+        },
+        {
+          "id": "gpt-4.1-mini",
+          "name": "GPT-4.1 mini 2025-04-14",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 32768,
+          "cost": {
+            "input": 0.39999999999999997,
+            "output": 1.5999999999999999,
+            "cacheRead": 0.09999999999999999,
+            "cacheWrite": 0.4
+          }
+        },
+        {
+          "id": "gpt-5-2025-08-07",
+          "name": "GPT-5 2025-08-07",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.25,
+            "output": 10,
+            "cacheRead": 0.125,
+            "cacheWrite": 1.25
+          }
+        },
+        {
+          "id": "gpt-5-mini-2025-08-07",
+          "name": "GPT-5 Mini 2025-08-07",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.25,
+            "output": 2,
+            "cacheRead": 0.024999999999999998,
+            "cacheWrite": 0.25
+          }
+        },
+        {
+          "id": "gpt-5-nano-2025-08-07",
+          "name": "GPT-5 Nano 2025-08-07",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.049999999999999996,
+            "output": 0.39999999999999997,
+            "cacheRead": 0.005,
+            "cacheWrite": 0.05
+          }
+        },
+        {
+          "id": "gpt-5-1-codex-2025-11-13",
+          "name": "GPT-5.1 Codex 2025-11-13",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.25,
+            "output": 10,
+            "cacheRead": 0.125,
+            "cacheWrite": 1.25
+          }
+        },
+        {
+          "id": "gpt-5-2-2025-12-11",
+          "name": "GPT-5.2 2025-12-11",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.75,
+            "output": 14,
+            "cacheRead": 0.175,
+            "cacheWrite": 1.75
+          }
+        },
+        {
+          "id": "gpt-5.4-2026-03-05",
+          "name": "GPT-5.4",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 2.75,
+            "output": 16.5,
+            "cacheRead": 0.275,
+            "cacheWrite": 2.5
+          }
+        },
+        {
+          "id": "gpt-5.5-2026-04-24",
+          "name": "GPT-5.5",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1050000,
+          "maxTokens": 128000,
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 5.5,
+            "output": 33,
+            "cacheRead": 0.55,
+            "cacheWrite": 1.25
+          }
+        },
+        {
+          "id": "gpt-5.6-luna-2026-07-09",
+          "name": "GPT-5.6 Luna",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1050000,
+          "maxTokens": 128000,
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.22,
+            "output": 1.32,
+            "cacheRead": 0.022,
+            "cacheWrite": 0.275
+          }
+        },
+        {
+          "id": "gpt-5.6-sol-2026-07-09",
+          "name": "GPT-5.6 Sol",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1050000,
+          "maxTokens": 128000,
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 5.5,
+            "output": 33,
+            "cacheRead": 0.55,
+            "cacheWrite": 6.875
+          }
+        },
+        {
+          "id": "gpt-5.6-terra-2026-07-09",
+          "name": "GPT-5.6 Terra",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1050000,
+          "maxTokens": 128000,
+          "api": "openai-responses",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 2.2,
+            "output": 13.200000000000001,
+            "cacheRead": 0.22,
+            "cacheWrite": 2.75
+          }
+        },
+        {
+          "id": "o3-mini",
+          "name": "o3 Mini 2025-01-31",
+          "input": [
+            "text"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 100000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.21,
+            "output": 4.84,
+            "cacheRead": 0.605,
+            "cacheWrite": 1.1
+          }
+        },
+        {
+          "id": "o1",
+          "name": "o1 2024-12-17",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 100000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 16.5,
+            "output": 66,
+            "cacheRead": 8.25,
+            "cacheWrite": 15
+          }
+        },
+        {
+          "id": "o3-2025-04-16",
+          "name": "o3 2025-04-16",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 100000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 2,
+            "output": 8,
+            "cacheRead": 0.5,
+            "cacheWrite": 2
+          }
+        },
+        {
+          "id": "o4-mini-2025-04-16",
+          "name": "o4-mini 2025-04-16",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 100000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.1,
+            "output": 4.4,
+            "cacheRead": 0.275,
+            "cacheWrite": 1.1
+          }
+        },
+        {
+          "id": "deepseek-v4-pro",
+          "name": "DeepSeek V4 Pro",
+          "input": [
+            "text"
+          ],
+          "contextWindow": 65536,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.74,
+            "output": 3.48,
+            "cacheRead": 0.145,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "gemini-3-flash",
+          "name": "Gemini 3 Flash",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.5,
+            "output": 3,
+            "cacheRead": 0.049999999999999996,
+            "cacheWrite": 0.5
+          }
+        },
+        {
+          "id": "gemini-3.1-flash-image",
+          "name": "Gemini 3.1 Flash Image",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.5,
+            "output": 3,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "gemini-3.1-pro",
+          "name": "Gemini 3.1 Pro",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 2,
+            "output": 12,
+            "cacheRead": 0.19999999999999998,
+            "cacheWrite": 2
+          }
+        },
+        {
+          "id": "gemini-3.5-flash",
+          "name": "Gemini 3.5 Flash",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.5,
+            "output": 9,
+            "cacheRead": 0.15,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "gemini-3.6-flash",
+          "name": "Gemini 3.6 Flash",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.75,
+            "output": 3.75,
+            "cacheRead": 0.075,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.75,
+            "output": 3.75,
+            "cacheRead": 0.075,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.75,
+            "output": 3.75,
+            "cacheRead": 0.075,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "qwen.qwen3-coder-30b-a3b-v1",
+          "name": "Bedrock Qwen3 Coder 30B A3B",
+          "input": [
+            "text"
+          ],
+          "contextWindow": 262144,
+          "maxTokens": 131072,
+          "cost": {
+            "input": 0.15,
+            "output": 0.6,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "qwen.qwen3-coder-480b-a35b-v1",
+          "name": "Bedrock Qwen3 Coder 480B A35B",
+          "input": [
+            "text"
+          ],
+          "contextWindow": 262144,
+          "maxTokens": 131072,
+          "cost": {
+            "input": 0.44999999999999996,
+            "output": 1.7999999999999998,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "moonshotai.kimi-k2.5",
+          "name": "Bedrock MoonshotAI Kimi K2.5",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 262144,
+          "maxTokens": 131072,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 0.6,
+            "output": 3.03,
+            "cacheRead": 0.1,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "id": "grok-4.6",
+          "name": "Grok 4.6",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 128000,
+          "maxTokens": 4096,
+          "cost": {
+            "input": 2.2,
+            "output": 6.6000000000000005,
+            "cacheRead": 0.55,
+            "cacheWrite": 3
+          }
+        }
+      ]
+    },
+    "codemie-anthropic": {
+      "baseUrl": "http://localhost:51724",
+      "api": "anthropic-messages",
+      "apiKey": "proxy-handled",
+      "authHeader": true,
+      "compat": {
+        "supportsReasoningEffort": true,
+        "thinkingFormat": "reasoning_effort"
+      },
+      "models": [
+        {
+          "id": "claude-4-5-sonnet-vertex",
+          "name": "VertexAI Claude Sonnet 4.5",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 3,
+            "output": 15,
+            "cacheRead": 0.3,
+            "cacheWrite": 3.75
+          }
+        },
+        {
+          "id": "claude-sonnet-4-6-vertex",
+          "name": "VertexAI Claude Sonnet 4.6",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 3,
+            "output": 15,
+            "cacheRead": 0.3,
+            "cacheWrite": 3.75
+          }
+        },
+        {
+          "id": "claude-opus-4-6-vertex",
+          "name": "VertexAI Claude Opus 4.6",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 5,
+            "output": 25,
+            "cacheRead": 0.5,
+            "cacheWrite": 6.25
+          }
+        },
+        {
+          "id": "claude-4-5-sonnet",
+          "name": "Bedrock Claude 4.5 Sonnet",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 3.3000000000000003,
+            "output": 16.5,
+            "cacheRead": 0.33,
+            "cacheWrite": 4.125
+          }
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "name": "Bedrock Claude Sonnet 4.6",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 3.3000000000000003,
+            "output": 16.5,
+            "cacheRead": 0.33,
+            "cacheWrite": 4.125
+          }
+        },
+        {
+          "id": "claude-sonnet-5",
+          "name": "Bedrock Claude Sonnet 5",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 2.2,
+            "output": 11,
+            "cacheRead": 0.22,
+            "cacheWrite": 2.75
+          }
+        },
+        {
+          "id": "claude-opus-4-5-20251101",
+          "name": "Bedrock Claude Opus 4.5",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 5,
+            "output": 25,
+            "cacheRead": 0.5,
+            "cacheWrite": 6.25
+          }
+        },
+        {
+          "id": "claude-opus-4-6-20260205",
+          "name": "Bedrock Claude Opus 4.6",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 5.5,
+            "output": 27.5,
+            "cacheRead": 0.55,
+            "cacheWrite": 6.875
+          }
+        },
+        {
+          "id": "claude-opus-4-7",
+          "name": "Bedrock Claude Opus 4.7",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 5.5,
+            "output": 27.5,
+            "cacheRead": 0.55,
+            "cacheWrite": 6.875
+          }
+        },
+        {
+          "id": "claude-opus-4-8",
+          "name": "Bedrock Claude Opus 4.8",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 5,
+            "output": 25,
+            "cacheRead": 0.5,
+            "cacheWrite": 6.25
+          }
+        },
+        {
+          "id": "claude-opus-5",
+          "name": "Bedrock Claude Opus 5",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "cost": {
+            "input": 5.5,
+            "output": 27.5,
+            "cacheRead": 0.55,
+            "cacheWrite": 6.875
+          }
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "name": "Bedrock Claude Haiku 4.5",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 1.1,
+            "output": 5.5,
+            "cacheRead": 0.11,
+            "cacheWrite": 1.375
+          }
+        },
+        {
+          "id": "claude-sonnet-4-5-20250929",
+          "name": "Bedrock Claude 4.5 Sonnet",
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 200000,
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "minimal",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "high",
+            "max": "high"
+          },
+          "cost": {
+            "input": 3.3000000000000003,
+            "output": 16.5,
+            "cacheRead": 0.33,
+            "cacheWrite": 4.125
+          }
+        }
+      ]
+    }
+  }
+}

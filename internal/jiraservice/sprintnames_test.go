@@ -1,4 +1,4 @@
-package main
+package jiraservice
 
 import "testing"
 
@@ -18,22 +18,22 @@ func TestParseSprintNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseSprintNames(tt.raw)
+			got, err := ParseSprintNames(tt.raw)
 			if tt.wantErr {
 				if err == nil {
-					t.Fatalf("parseSprintNames(%q) expected error, got nil", tt.raw)
+					t.Fatalf("ParseSprintNames(%q) expected error, got nil", tt.raw)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("parseSprintNames(%q) unexpected error: %v", tt.raw, err)
+				t.Fatalf("ParseSprintNames(%q) unexpected error: %v", tt.raw, err)
 			}
 			if len(got) != len(tt.want) {
-				t.Fatalf("parseSprintNames(%q) returned %d names, want %d: %v", tt.raw, len(got), len(tt.want), got)
+				t.Fatalf("ParseSprintNames(%q) returned %d names, want %d: %v", tt.raw, len(got), len(tt.want), got)
 			}
 			for i := range tt.want {
 				if got[i] != tt.want[i] {
-					t.Fatalf("parseSprintNames(%q) got %q at index %d, want %q", tt.raw, got[i], i, tt.want[i])
+					t.Fatalf("ParseSprintNames(%q) got %q at index %d, want %q", tt.raw, got[i], i, tt.want[i])
 				}
 			}
 		})

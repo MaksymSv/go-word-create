@@ -28,7 +28,7 @@ func main() {
 	}
 
 	// Define command line flags
-	sprintName := flag.String("sprint", "", "Sprint name (required)")
+	sprintName := flag.String("sprint", "", "Sprint name, or comma-separated sprint names, e.g. \"ST26.20,PC26.20\" (required)")
 	outputFile := flag.String("output", cfg.OutputFile, "Output file name")
 	debugMode := flag.Bool("debug", false, "Debug mode: print data without generating Word document")
 	flag.Parse()
@@ -46,23 +46,37 @@ func main() {
 		log.Fatalf("Failed to create Jira service: %v", err)
 	}
 
-	// Get issues from sprint
-	issues, err := jiraService.GetSprintIssues(cfg.ProjectKey, *sprintName, cfg.GetAllBoardNames(), cfg.JiraIssueTypes)
+	sprintNames, err := jiraservice.ParseSprintNames(*sprintName)
 	if err != nil {
-		log.Fatalf("Failed to get sprint issues: %v", err)
+		log.Fatalf("Failed to parse -sprint: %v", err)
 	}
 
-	if *debugMode {
-		// Print debug information
-		fmt.Printf("Found %d issues in sprint '%s'\n", len(issues), *sprintName)
-		fmt.Println("\nIssues:")
-		for _, issue := range issues {
-			// Truncate strings that are too long
-			fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f\n",
-				issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints)
+	// Get issues from every sprint
+	var issues []jiraservice.Issue
+	for _, sprint := range sprintNames {
+		sprintIssues, err := jiraService.GetSprintIssues(cfg.ProjectKey, sprint, cfg.GetAllBoardNames(), cfg.JiraIssueTypes)
+		if err != nil {
+			log.Fatalf("Failed to get issues for sprint %q: %v", sprint, err)
 		}
-		fmt.Printf("\nTotal issues: %d\n", len(issues))
-	} else {
+
+		if *debugMode {
+			if len(sprintNames) > 1 {
+				fmt.Printf("\n=== Sprint: %s ===\n", sprint)
+			}
+			fmt.Printf("Found %d issues in sprint '%s'\n", len(sprintIssues), sprint)
+			fmt.Println("\nIssues:")
+			for _, issue := range sprintIssues {
+				// Truncate strings that are too long
+				fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f\n",
+					issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints)
+			}
+			fmt.Printf("\nTotal issues: %d\n", len(sprintIssues))
+		}
+
+		issues = append(issues, sprintIssues...)
+	}
+
+	if !*debugMode {
 		// Create Word document
 		doc := word.NewDocument()
 		cfg := word.DefaultConfig()

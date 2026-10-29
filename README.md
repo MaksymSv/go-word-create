@@ -88,6 +88,7 @@ make build-month
 make build-sprint
 make build-sprint-label-report
 make build-web-dashboard
+make build-mcp
 
 # Run commands
 make run-month MONTH=2025.10              # Generate Word document
@@ -116,6 +117,9 @@ go build -o bin/get-sprint-label-report ./cmd/get-sprint-label-report
 
 # Build web dashboard
 go build -o bin/web-sprint-labels-report ./cmd/web-sprint-labels-report
+
+# Build MCP server
+go build -o bin/mcp-jira-reports ./cmd/mcp-jira-reports
 ```
 
 ## Running
@@ -202,6 +206,51 @@ Then open `http://localhost:8080` in a browser.
 - Clicking a label button adds or removes that label on the Jira issue instantly
 - Dark/light theme toggle at the far right of the toolbar; theme is remembered across sessions
 
+### MCP Server (for LLM clients)
+
+A [Model Context Protocol](https://modelcontextprotocol.io) server over stdio that exposes the same Jira data as typed JSON tools, so Claude Code, Claude Desktop, Codemie and other MCP clients can answer sprint/label questions directly.
+
+```bash
+make build-mcp
+./bin/mcp-jira-reports -workdir /path/to/go-word-create
+```
+
+#### Flags:
+- `-workdir=.` (optional): directory containing `.env`; the process changes into it before loading configuration. Set it when the client starts the server from another directory.
+- `-debug`: Enable verbose logging (stderr only; stdout carries the protocol)
+
+#### Tools:
+| Tool | Purpose |
+|---|---|
+| `list_teams` | Configured teams (component + board), tracked report labels, issue types |
+| `list_sprints` | Latest sprints of a team's board (default 5), with IDs |
+| `get_sprint_issues` | Issues of a sprint by ID, optional status filter, per-label counts and story points |
+| `sprint_label_report` | Label report by sprint name(s), grouped by component (same data as `get-sprint-label-report -format full`) |
+| `month_issues` | Issues "In Progress" during a month, Closed vs Open per team |
+| `set_issue_label` | **Write.** Add/remove a tracked label on an issue. Without `confirm=true` it only returns a preview |
+
+#### Registration:
+The repository ships a project-scoped `.mcp.json` (no secrets; credentials stay in `.env`). Build the binary first, then start Claude Code in the repo. To register it elsewhere:
+
+```bash
+claude mcp add jira-reports -- /abs/path/bin/mcp-jira-reports -workdir /abs/path/go-word-create
+```
+
+Claude Desktop / Codemie (`mcpServers` JSON):
+
+```json
+{
+  "mcpServers": {
+    "jira-reports": {
+      "command": "/abs/path/bin/mcp-jira-reports",
+      "args": ["-workdir", "/abs/path/go-word-create"]
+    }
+  }
+}
+```
+
+A companion skill at `.claude/skills/jira-sprint-reports/` teaches Claude which tool to use and how to read the metrics.
+
 ## Project Structure
 
 ```
@@ -210,12 +259,15 @@ go-word-create/
 │   ├── get-sprint-issues-from-jira/   # Sprint issues fetcher
 │   ├── get-month-issues-from-jira/    # Month issues fetcher
 │   ├── get-sprint-label-report/       # Sprint label report
-│   └── web-sprint-labels-report/      # Web dashboard server
+│   ├── web-sprint-labels-report/      # Web dashboard server
+│   └── mcp-jira-reports/              # MCP server (stdio) for LLM clients
 ├── internal/
 │   ├── config/              # Configuration loading from .env
 │   ├── dashboard/           # Web dashboard HTTP handlers and embedded SPA
 │   ├── jiraservice/         # Jira API client and issue fetching
 │   ├── labelreport/         # Label aggregation logic
+│   ├── mcpserver/           # MCP tool definitions and handlers
+│   ├── sprintview/          # Sprint issue view shared by dashboard and MCP
 │   └── word/                # Word document generation and table formatting
 ├── go.mod                   # Go module definition
 ├── .env.example             # Example environment variables

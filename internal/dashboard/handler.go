@@ -12,6 +12,7 @@ import (
 
 	"go-word-create/internal/config"
 	"go-word-create/internal/jiraservice"
+	"go-word-create/internal/sprintview"
 )
 
 //go:embed web
@@ -94,48 +95,13 @@ func (h *DashboardHandler) getSprintIssues(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	epicNames, err := h.jira.LoadEpics(h.cfg.ProjectKey)
-	if err != nil {
-		log.Printf("dashboard: failed to load epics: %v", err)
-		epicNames = make(map[string]string)
-	}
-
-	issues, err := h.jira.GetIssuesFromSprintWithChangelog(sprintID, epicNames, nil)
+	resp, err := sprintview.Build(h.jira, h.cfg.ProjectKey, h.cfg.ReportLabels, sprintID)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, fmt.Sprintf("failed to load sprint issues (sprintID=%d): %v", sprintID, err))
 		return
 	}
 
-	configuredSet := make(map[string]struct{}, len(h.cfg.ReportLabels))
-	for _, l := range h.cfg.ReportLabels {
-		configuredSet[l] = struct{}{}
-	}
-
-	dashIssues := make([]DashboardIssue, 0, len(issues))
-	for _, issue := range issues {
-		active := []string{}
-		for _, l := range issue.Labels {
-			if _, ok := configuredSet[l]; ok {
-				active = append(active, l)
-			}
-		}
-		dashIssues = append(dashIssues, DashboardIssue{
-			Key:          issue.Key,
-			Summary:      issue.Summary,
-			Epic:         issue.Epic,
-			Implementer:  issue.Implementer,
-			StoryPoints:  issue.StoryPoints,
-			Type:         issue.Type,
-			Status:       issue.Status,
-			URL:          issue.URL,
-			ActiveLabels: active,
-		})
-	}
-
-	writeJSON(w, SprintIssuesResponse{
-		ConfiguredLabels: h.cfg.ReportLabels,
-		Issues:           dashIssues,
-	})
+	writeJSON(w, resp)
 }
 
 func (h *DashboardHandler) updateLabel(w http.ResponseWriter, r *http.Request) {

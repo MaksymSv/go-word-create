@@ -1,6 +1,10 @@
 package dashboard
 
-import "time"
+import (
+	"time"
+
+	"go-word-create/internal/sprintview"
+)
 
 // TeamResponse represents one configured team for the frontend.
 type TeamResponse struct {
@@ -18,23 +22,10 @@ type SprintResponse struct {
 }
 
 // DashboardIssue is a single issue row in the sprint table.
-type DashboardIssue struct {
-	Key          string   `json:"key"`
-	Summary      string   `json:"summary"`
-	Epic         string   `json:"epic"`
-	Implementer  string   `json:"implementer"`
-	StoryPoints  float64  `json:"storyPoints"`
-	Type         string   `json:"type"`
-	Status       string   `json:"status"`
-	URL          string   `json:"url"`
-	ActiveLabels []string `json:"activeLabels"`
-}
+type DashboardIssue = sprintview.Issue
 
 // SprintIssuesResponse is the envelope returned by GET /api/sprints/{id}/issues.
-type SprintIssuesResponse struct {
-	ConfiguredLabels []string         `json:"configuredLabels"`
-	Issues           []DashboardIssue `json:"issues"`
-}
+type SprintIssuesResponse = sprintview.Response
 
 // LabelUpdateRequest is the body for POST /api/issues/{key}/labels.
 type LabelUpdateRequest struct {

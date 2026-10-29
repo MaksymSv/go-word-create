@@ -1,7 +1,10 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template / unversioned) → 1.0.0
+Version change: 1.0.0 → 1.1.0
+Amendment 1.1.0 (MINOR): added MCP server (stdio) as a third surface and the
+official MCP Go SDK to core dependencies.
+Previous: (template / unversioned) → 1.0.0
 Bump rationale: MAJOR — initial constitution creation; all principles and governance
 defined for the first time from project README and codebase analysis.
 
@@ -36,7 +39,8 @@ Follow-up TODOs:
 All user-facing functionality MUST be accessible via command-line flags and arguments.
 Entry points live exclusively under `cmd/`; each binary MUST document its flags in the
 project README. The HTTP server is a secondary surface and MUST NOT be the only way to
-invoke core document-generation logic.
+invoke core document-generation logic. The MCP server (`cmd/mcp-jira-reports`) is a
+third surface for LLM clients; it MUST reuse `internal/` logic, not duplicate it.
 
 - Binary flags use kebab-case or single-letter short forms (`-month`, `-output`, `-debug`).
 - Standard I/O contract: results to a file or stdout; errors to stderr.
@@ -104,6 +108,9 @@ issues without requiring a debugger.
   - `github.com/carmel/gooxml` — Word document generation; do not introduce a second
     OOXML library.
   - `github.com/joho/godotenv` — `.env` loading (supports Environment principle).
+  - `github.com/modelcontextprotocol/go-sdk` — MCP server for LLM clients; pinned to a
+    release compatible with the Go version above. The MCP server speaks over stdio, so
+    stdout is reserved for protocol frames and all logs MUST go to stderr.
 - **Build tooling**: `make` targets are the canonical way to build, test, lint, and run
   commands. New binaries MUST have corresponding `make` targets and appear in `make help`.
 - **Binary output**: compiled artifacts MUST go to `bin/` and MUST NOT be committed.
@@ -144,4 +151,4 @@ is resolved in favour of the constitution.
 section that explicitly confirms or flags violations before Phase 0 research begins.
 Violations MUST be justified in the Complexity Tracking table of the plan.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-05-29
+**Version**: 1.1.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-10-08

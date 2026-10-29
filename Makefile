@@ -1,10 +1,11 @@
-.PHONY: build build-month build-sprint build-sprint-label-report build-web-dashboard run-month run-sprint-label-report run-web-dashboard clean test fmt lint help
+.PHONY: build build-month build-sprint build-sprint-label-report build-web-dashboard build-mcp run-month run-sprint run-sprint-label-report run-web-dashboard clean test fmt lint help
 
 # Variables
 MONTH_CMD=./cmd/get-month-issues-from-jira
 SPRINT_CMD=./cmd/get-sprint-issues-from-jira
 SPRINT_LABEL_CMD=./cmd/get-sprint-label-report
 WEB_DASHBOARD_CMD=./cmd/web-sprint-labels-report
+MCP_CMD=./cmd/mcp-jira-reports
 OUTPUT_DIR=./bin
 
 # Default target
@@ -15,7 +16,9 @@ help:
 	@echo "  make build-sprint       - Build sprint issues fetcher"
 	@echo "  make build-sprint-label-report          - Build sprint label report binary"
 	@echo "  make build-web-dashboard                - Build web sprint labels dashboard"
+	@echo "  make build-mcp                          - Build MCP server for LLM clients (bin/mcp-jira-reports)"
 	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
+	@echo "  make run-sprint SPRINT=\"Sprint 16\" [OUTPUT=file.docx] [LOGONLY=1] - Run collecting sprint issues (OUTPUT, LOGONLY optional)"
 	@echo "  make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] - Run sprint label report"
 	@echo "  make run-web-dashboard [PORT=8080]      - Start web sprint labels dashboard"
 	@echo "  make clean              - Remove build artifacts"
@@ -25,7 +28,7 @@ help:
 	@echo "  make help               - Show this help message"
 
 # Build all binaries
-build: build-month build-sprint build-sprint-label-report build-web-dashboard
+build: build-month build-sprint build-sprint-label-report build-web-dashboard build-mcp
 	@echo "✓ All binaries built in $(OUTPUT_DIR)/"
 
 # Build month issues fetcher
@@ -52,6 +55,12 @@ build-web-dashboard:
 	go build -o $(OUTPUT_DIR)/web-sprint-labels-report $(WEB_DASHBOARD_CMD)
 	@echo "✓ Web dashboard built: $(OUTPUT_DIR)/web-sprint-labels-report"
 
+# Build MCP server (stdio)
+build-mcp:
+	@mkdir -p $(OUTPUT_DIR)
+	go build -o $(OUTPUT_DIR)/mcp-jira-reports $(MCP_CMD)
+	@echo "✓ MCP server built: $(OUTPUT_DIR)/mcp-jira-reports"
+
 # Run sprint label report
 run-sprint-label-report: build-sprint-label-report
 	@if [ -z "$(SPRINT)" ]; then \
@@ -69,6 +78,15 @@ run-month: build-month
 		exit 1; \
 	fi
 	$(OUTPUT_DIR)/get-month-issues -month="$(MONTH)"$(if $(LOGONLY), -debug)
+
+# Run sprint issues fetcher
+run-sprint: build-sprint
+	@if [ -z "$(SPRINT)" ]; then \
+		echo "Error: SPRINT parameter required"; \
+		echo "Usage: make run-sprint SPRINT=\"Sprint 16\" [OUTPUT=file.docx] [LOGONLY=1]"; \
+		exit 1; \
+	fi
+	$(OUTPUT_DIR)/get-sprint-issues -sprint="$(SPRINT)"$(if $(OUTPUT), -output="$(OUTPUT)")$(if $(LOGONLY), -debug)
 
 # Start web sprint labels dashboard
 run-web-dashboard: build-web-dashboard
