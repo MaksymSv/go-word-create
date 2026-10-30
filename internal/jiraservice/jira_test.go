@@ -24,6 +24,19 @@ func history(entries ...[]jira.ChangelogItems) []jira.ChangelogHistory {
 
 func assignee(name string) *jira.User { return &jira.User{DisplayName: name} }
 
+// assignChange is an assignee change item; an empty string means unassigned.
+func assignChange(from, to string) jira.ChangelogItems {
+	return jira.ChangelogItems{Field: "assignee", FromString: from, ToString: to}
+}
+
+// entry groups the items of one changelog history entry.
+func entry(it ...jira.ChangelogItems) []jira.ChangelogItems { return it }
+
+// statusChange is a status change item moving the issue to the given status.
+func statusChange(to string) jira.ChangelogItems {
+	return jira.ChangelogItems{Field: "status", ToString: to}
+}
+
 func TestResolveImplementer(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -69,8 +82,8 @@ func TestResolveImplementer(t *testing.T) {
 			want: "",
 		},
 		{
-			// fields.Assignee is NOT consulted when "In Review." is found;
-			// only currentAssignee (built from changelog) is returned.
+			// The assignee never changed, so the current assignee is also the
+			// creation-time assignee and counts at the "In Review." move.
 			name: "in_review_no_assignee_change_in_history_fields_assignee_set",
 			issue: jira.Issue{
 				Fields: &jira.IssueFields{Assignee: assignee("Alice")},
@@ -78,7 +91,7 @@ func TestResolveImplementer(t *testing.T) {
 					Histories: history(items("status", "In Review.")),
 				},
 			},
-			want: "",
+			want: "Alice",
 		},
 		{
 			name: "in_review_assignee_in_same_entry",
@@ -195,9 +208,8 @@ func TestResolveImplementer(t *testing.T) {
 		// Path E: Realistic full-flow scenarios
 		{
 			// Issue assigned at creation; Jira does not record the initial assignment
-			// as a changelog entry — only subsequent changes appear. When status reaches
-			// "In Review." but no assignee item was ever logged, currentAssignee stays ""
-			// and fields.Assignee is NOT consulted at that point.
+			// as a changelog entry. With no assignee change at all, the current
+			// assignee is the creation-time assignee and counts at "In Progress".
 			name: "full_flow_assigned_at_creation_no_history_assignee_change",
 			issue: jira.Issue{
 				Fields: &jira.IssueFields{Assignee: assignee("Alice")},
@@ -209,7 +221,7 @@ func TestResolveImplementer(t *testing.T) {
 					),
 				},
 			},
-			want: "",
+			want: "Alice",
 		},
 		{
 			name: "full_flow_assigned_when_moved_to_in_progress",
@@ -270,6 +282,238 @@ func TestResolveImplementer(t *testing.T) {
 				},
 			},
 			want: "Alice",
+		},
+
+		// User story 1: assignee before the first move to "In Progress"
+		{
+			name: "us1_reassigned_after_start_keeps_original",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Bob")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(statusChange("In Progress")),
+						entry(assignChange("Alice", "Bob")),
+						entry(statusChange("In Review.")),
+					),
+				},
+			},
+			want: "Alice",
+		},
+		{
+			name: "us1_reassigned_before_start_takes_latest",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Bob")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(assignChange("Alice", "Bob")),
+						entry(statusChange("In Progress")),
+					),
+				},
+			},
+			want: "Bob",
+		},
+		{
+			name: "us1_assigned_at_creation_never_changed",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Alice")},
+				Changelog: &jira.Changelog{
+					Histories: history(entry(statusChange("In Progress"))),
+				},
+			},
+			want: "Alice",
+		},
+		{
+			name: "us1_assignee_set_in_same_entry_as_move_counts",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Carol")},
+				Changelog: &jira.Changelog{
+					Histories: history(entry(assignChange("", "Carol"), statusChange("In Progress"))),
+				},
+			},
+			want: "Carol",
+		},
+		{
+			name: "us1_first_of_several_in_progress_moves_wins",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Bob")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(assignChange("", "Alice"), statusChange("In Progress")),
+						entry(statusChange("To Do")),
+						entry(assignChange("Alice", "Bob"), statusChange("In Progress")),
+					),
+				},
+			},
+			want: "Alice",
+		},
+		{
+			name: "us1_status_name_case_insensitive",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Dave")},
+				Changelog: &jira.Changelog{
+					Histories: history(entry(assignChange("", "Dave"), statusChange("IN PROGRESS"))),
+				},
+			},
+			want: "Dave",
+		},
+		{
+			// A different status that merely starts with "In Progress" must not trigger
+			// the rule; the current assignee is returned instead of the earlier Eve.
+			name: "us1_similar_status_name_does_not_match",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Frank")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(statusChange("In Progress (Dev)")),
+						entry(assignChange("Eve", "Frank")),
+					),
+				},
+			},
+			want: "Frank",
+		},
+
+		// User story 2: fall back to the assignee before the first "In Review." move
+		{
+			name: "us2_unassigned_at_start_assigned_before_review",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Carl")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(statusChange("In Progress")),
+						entry(assignChange("", "Cara")),
+						entry(statusChange("In Review.")),
+						entry(assignChange("Cara", "Carl")),
+					),
+				},
+			},
+			want: "Cara",
+		},
+		{
+			name: "us2_skipped_in_progress",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Dina")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(assignChange("", "Cara")),
+						entry(statusChange("In Review.")),
+						entry(assignChange("Cara", "Dina")),
+					),
+				},
+			},
+			want: "Cara",
+		},
+		{
+			name: "us2_in_progress_assignee_wins_over_in_review_assignee",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Eli")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(assignChange("", "Alice")),
+						entry(statusChange("In Progress")),
+						entry(assignChange("Alice", "Eli")),
+						entry(statusChange("In Review.")),
+					),
+				},
+			},
+			want: "Alice",
+		},
+		{
+			name: "us2_assignee_removed_before_start_falls_back",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Dina")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(assignChange("Alice", "")),
+						entry(statusChange("In Progress")),
+						entry(assignChange("", "Dina")),
+						entry(statusChange("In Review.")),
+					),
+				},
+			},
+			want: "Dina",
+		},
+		{
+			// Only the first move to "In Progress" counts, even when it had no assignee.
+			name: "us2_later_in_progress_move_does_not_replace_empty_first",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Fay")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(statusChange("In Progress")),
+						entry(assignChange("", "Fay")),
+						entry(statusChange("In Progress")),
+						entry(statusChange("In Review.")),
+					),
+				},
+			},
+			want: "Fay",
+		},
+		{
+			name: "us2_first_in_review_move_wins",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Gus")},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(assignChange("", "Cara")),
+						entry(statusChange("In Review.")),
+						entry(assignChange("Cara", "Gus")),
+						entry(statusChange("In Review.")),
+					),
+				},
+			},
+			want: "Cara",
+		},
+		{
+			// Same entry: the assignee set together with the "In Review." move counts.
+			name: "us2_assignee_set_in_same_entry_as_review_move",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{},
+				Changelog: &jira.Changelog{
+					Histories: history(entry(assignChange("", "Hank"), statusChange("In Review."))),
+				},
+			},
+			want: "Hank",
+		},
+
+		// User story 3: neither moment applies, so use the current assignee, then empty
+		{
+			name: "us3_never_reached_either_status_uses_current_assignee",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Ivy")},
+				Changelog: &jira.Changelog{
+					Histories: history(entry(statusChange("Closed"))),
+				},
+			},
+			want: "Ivy",
+		},
+		{
+			name: "us3_assignee_changed_but_never_started_uses_current_assignee",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{Assignee: assignee("Bob")},
+				Changelog: &jira.Changelog{
+					Histories: history(entry(assignChange("Alice", "Bob"))),
+				},
+			},
+			want: "Bob",
+		},
+		{
+			name: "us3_no_assignee_anywhere_is_empty",
+			issue: jira.Issue{
+				Fields: &jira.IssueFields{},
+				Changelog: &jira.Changelog{
+					Histories: history(
+						entry(statusChange("In Progress")),
+						entry(statusChange("In Review.")),
+						entry(statusChange("Closed")),
+					),
+				},
+			},
+			want: "",
+		},
+		{
+			name:  "us3_nil_fields_and_nil_changelog_is_empty",
+			issue: jira.Issue{},
+			want:  "",
 		},
 	}
 

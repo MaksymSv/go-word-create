@@ -66,7 +66,8 @@ func New(cfg *config.Config, j Jira) *mcp.Server {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "get_sprint_issues",
 		Description: "Issues of one sprint (key, summary, epic, implementer, story points, type, status, active report labels) " +
-			"with per-label counts/story points. Optionally filter by status; summaries cover the filtered set.",
+			"with per-label counts/story points. Optionally filter by status; summaries cover the filtered set. " +
+			"implementer = assignee before the issue first moved to 'In Progress', else before it first moved to 'In Review.', else the current assignee.",
 		Annotations: readOnly,
 	}, h.getSprintIssues)
 

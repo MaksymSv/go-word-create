@@ -202,7 +202,8 @@ Then open `http://localhost:8080` in a browser.
 
 #### Features:
 - Team selector buttons load the 5 most recent sprints for each configured board
-- Sprint table shows: issue type icon, issue key (Jira link), summary, epic, story points, status, and label buttons
+- Sprint table shows: issue type icon, issue key (Jira link), summary, epic, implementer, story points, status, and label buttons
+- Implementer is the assignee before the issue first moved to "In Progress"; if there was none, the assignee before it first moved to "In Review."; otherwise the current assignee
 - Clicking a label button adds or removes that label on the Jira issue instantly
 - Dark/light theme toggle at the far right of the toolbar; theme is remembered across sessions
 
