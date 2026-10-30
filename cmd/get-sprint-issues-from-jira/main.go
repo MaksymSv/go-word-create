@@ -5,12 +5,36 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
+	"time"
 
 	"go-word-create/internal/config"
+	"go-word-create/internal/issuecsv"
 	"go-word-create/internal/jiraservice"
 	"go-word-create/internal/word"
 )
+
+const (
+	formatDocx = "docx"
+	formatCSV  = "csv"
+)
+
+func writeCSV(path string, issues []jiraservice.Issue) (err error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+	}()
+	return issuecsv.Write(f, issues)
+}
 
 // truncate cuts a string if it's longer than maxLen and adds "..." at the end
 func truncate(s string, maxLen int) string {
@@ -30,6 +54,8 @@ func main() {
 	// Define command line flags
 	sprintName := flag.String("sprint", "", "Sprint name, or comma-separated sprint names, e.g. \"ST26.20,PC26.20\" (required)")
 	outputFile := flag.String("output", cfg.OutputFile, "Output file name")
+	format := flag.String("format", formatDocx, "Output format: docx (one document for all sprints) or csv (one file per sprint)")
+	outputDir := flag.String("output-dir", ".", "Directory for CSV files (csv format only)")
 	debugMode := flag.Bool("debug", false, "Debug mode: print data without generating Word document")
 	flag.Parse()
 
@@ -37,6 +63,11 @@ func main() {
 	if *sprintName == "" {
 		fmt.Println("Error: Sprint name is required")
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	if *format != formatDocx && *format != formatCSV {
+		fmt.Printf("Error: -format must be %q or %q, got %q\n", formatDocx, formatCSV, *format)
 		os.Exit(1)
 	}
 
@@ -59,6 +90,14 @@ func main() {
 			log.Fatalf("Failed to get issues for sprint %q: %v", sprint, err)
 		}
 
+		if *format == formatCSV && !*debugMode {
+			path := filepath.Join(*outputDir, issuecsv.FileName(sprint, time.Now()))
+			if err := writeCSV(path, sprintIssues); err != nil {
+				log.Fatalf("Failed to write CSV for sprint %q: %v", sprint, err)
+			}
+			fmt.Printf("Created CSV '%s' with %d issues\n", path, len(sprintIssues))
+		}
+
 		if *debugMode {
 			if len(sprintNames) > 1 {
 				fmt.Printf("\n=== Sprint: %s ===\n", sprint)
@@ -76,7 +115,7 @@ func main() {
 		issues = append(issues, sprintIssues...)
 	}
 
-	if !*debugMode {
+	if !*debugMode && *format == formatDocx {
 		// Create Word document
 		doc := word.NewDocument()
 		cfg := word.DefaultConfig()

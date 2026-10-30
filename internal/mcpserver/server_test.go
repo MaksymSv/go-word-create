@@ -314,6 +314,69 @@ func connect(t *testing.T, f *fakeJira) *mcp.ClientSession {
 	return cs
 }
 
+func TestSprintIssuesMultiSprintStatusAndCSV(t *testing.T) {
+	f := &fakeJira{namedIssues: map[string][]jiraservice.Issue{
+		"ST26.20": {
+			{Type: "Story", Key: "PRJ-1", Summary: "One, with comma", Epic: "E", StoryPoints: 3, Status: "Done", Components: []string{"Alpha"}},
+			{Type: "Bug", Key: "PRJ-2", Summary: "Two", StoryPoints: 2, Status: "In Progress", Components: []string{"Beta"}},
+		},
+		"PC26.20": {{Type: "Task", Key: "PRJ-3", Summary: "Three", StoryPoints: 1, Status: "Done"}},
+	}}
+	h := newHandler(f)
+
+	_, out, err := h.sprintIssues(context.Background(), nil, sprintIssuesIn{Sprints: []string{"ST26.20,PC26.20"}, Statuses: []string{"done", "Blocked"}, Format: "csv"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Sprints) != 2 || out.Sprints[0].Sprint != "ST26.20" || out.Sprints[1].Sprint != "PC26.20" {
+		t.Fatalf("sprints = %+v", out.Sprints)
+	}
+	st := out.Sprints[0]
+	if st.Count != 1 || st.StoryPoints != 3 || st.Issues[0].Key != "PRJ-1" {
+		t.Errorf("status filter result = %+v", st)
+	}
+	if !reflect.DeepEqual(st.AvailableStatuses, []string{"Done", "In Progress"}) || !reflect.DeepEqual(st.UnmatchedStatuses, []string{"Blocked"}) {
+		t.Errorf("statuses = %v / %v", st.AvailableStatuses, st.UnmatchedStatuses)
+	}
+	wantCSV := "Type,Key,Summary,Epic,Story Points,Status\nStory,PRJ-1,\"One, with comma\",E,3.0,Done\n"
+	if st.CSV != wantCSV {
+		t.Errorf("csv = %q", st.CSV)
+	}
+	wantName := "ST26.20_" + time.Now().Format("2006-01-02") + ".csv"
+	if st.FileName != wantName {
+		t.Errorf("fileName = %q, want %q", st.FileName, wantName)
+	}
+
+	_, out, err = h.sprintIssues(context.Background(), nil, sprintIssuesIn{Sprints: []string{"ST26.20"}})
+	if err != nil || out.Sprints[0].CSV != "" || out.Sprints[0].FileName != "" || out.Sprints[0].Count != 2 {
+		t.Errorf("default json format: err=%v out=%+v", err, out)
+	}
+}
+
+func TestSprintIssuesTeamFilterAndErrors(t *testing.T) {
+	f := &fakeJira{namedIssues: map[string][]jiraservice.Issue{"S": {
+		{Key: "PRJ-1", Components: []string{"Alpha"}},
+		{Key: "PRJ-2", Components: []string{"Beta"}},
+	}}}
+	h := newHandler(f)
+	_, out, err := h.sprintIssues(context.Background(), nil, sprintIssuesIn{Sprints: []string{"S"}, Team: "Beta"})
+	if err != nil || out.Sprints[0].Count != 1 || out.Sprints[0].Issues[0].Key != "PRJ-2" {
+		t.Fatalf("err=%v out=%+v", err, out)
+	}
+	if !reflect.DeepEqual(f.lastBoards, []string{"Beta Board"}) {
+		t.Errorf("boards = %v", f.lastBoards)
+	}
+	if _, _, err := h.sprintIssues(context.Background(), nil, sprintIssuesIn{Sprints: []string{" , "}}); err == nil {
+		t.Error("expected error for empty sprint list")
+	}
+	if _, _, err := h.sprintIssues(context.Background(), nil, sprintIssuesIn{Sprints: []string{"S"}, Format: "xml"}); err == nil {
+		t.Error("expected error for bad format")
+	}
+	if _, _, err := h.sprintIssues(context.Background(), nil, sprintIssuesIn{Sprints: []string{"missing"}}); err == nil || !strings.Contains(err.Error(), "missing") {
+		t.Errorf("error should name the sprint, got %v", err)
+	}
+}
+
 func TestServerEndToEnd(t *testing.T) {
 	f := &fakeJira{}
 	cs := connect(t, f)
@@ -327,7 +390,7 @@ func TestServerEndToEnd(t *testing.T) {
 	for _, tl := range tools.Tools {
 		got[tl.Name] = tl
 	}
-	for _, name := range []string{"list_teams", "list_sprints", "get_sprint_issues", "sprint_label_report", "month_issues", "set_issue_label"} {
+	for _, name := range []string{"list_teams", "list_sprints", "get_sprint_issues", "sprint_issues", "sprint_label_report", "month_issues", "set_issue_label"} {
 		if got[name] == nil {
 			t.Errorf("tool %q not registered", name)
 		}
@@ -337,6 +400,9 @@ func TestServerEndToEnd(t *testing.T) {
 	}
 	if r := got["get_sprint_issues"]; r != nil && !r.Annotations.ReadOnlyHint {
 		t.Error("get_sprint_issues must be read-only")
+	}
+	if r := got["sprint_issues"]; r != nil && !r.Annotations.ReadOnlyHint {
+		t.Error("sprint_issues must be read-only")
 	}
 
 	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "list_teams"})
@@ -367,5 +433,27 @@ func TestServerEndToEnd(t *testing.T) {
 	}})
 	if err != nil || res.IsError || len(f.updates) != 0 {
 		t.Errorf("default confirm=false must be a no-op preview: err=%v res=%+v updates=%v", err, res, f.updates)
+	}
+}
+
+func TestSprintIssuesOverProtocol(t *testing.T) {
+	f := &fakeJira{namedIssues: map[string][]jiraservice.Issue{
+		"ST26.20": {{Type: "Story", Key: "PRJ-1", Summary: "One", Status: "Done", StoryPoints: 2}},
+		"PC26.20": {},
+	}}
+	cs := connect(t, f)
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "sprint_issues", Arguments: map[string]any{
+		"sprints": []string{"ST26.20", "PC26.20"}, "format": "csv",
+	}})
+	if err != nil || res.IsError {
+		t.Fatalf("err=%v res=%+v", err, res)
+	}
+	b, _ := json.Marshal(res.StructuredContent)
+	var out sprintIssuesOut
+	if err := json.Unmarshal(b, &out); err != nil || len(out.Sprints) != 2 || out.Sprints[0].Count != 1 || out.Sprints[1].Count != 0 {
+		t.Fatalf("structured content = %s (err=%v)", b, err)
+	}
+	if out.Sprints[1].Issues == nil || !strings.HasPrefix(out.Sprints[0].CSV, "Type,Key,") {
+		t.Errorf("unexpected output: %s", b)
 	}
 }

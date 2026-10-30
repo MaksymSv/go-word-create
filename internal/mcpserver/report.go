@@ -61,7 +61,7 @@ func round1(v float64) float64 { return math.Round(v*10) / 10 }
 
 // filterByStatus keeps issues whose status matches any of statuses (case-insensitive,
 // trimmed). It also returns the requested statuses that matched no issue.
-func filterByStatus(issues []sprintview.Issue, statuses []string) (kept []sprintview.Issue, unmatched []string) {
+func filterByStatus[T any](issues []T, statuses []string, statusOf func(T) string) (kept []T, unmatched []string) {
 	if len(statuses) == 0 {
 		return issues, nil
 	}
@@ -75,9 +75,9 @@ func filterByStatus(issues []sprintview.Issue, statuses []string) (kept []sprint
 		return issues, nil
 	}
 	seen := make(map[string]bool, len(wanted))
-	kept = []sprintview.Issue{}
+	kept = []T{}
 	for _, iss := range issues {
-		k := strings.ToLower(strings.TrimSpace(iss.Status))
+		k := strings.ToLower(strings.TrimSpace(statusOf(iss)))
 		if _, ok := wanted[k]; ok {
 			kept = append(kept, iss)
 			seen[k] = true
@@ -94,9 +94,17 @@ func filterByStatus(issues []sprintview.Issue, statuses []string) (kept []sprint
 
 // availableStatuses returns the distinct issue statuses, sorted.
 func availableStatuses(issues []sprintview.Issue) []string {
+	return distinctSorted(issues, func(i sprintview.Issue) string { return i.Status })
+}
+
+func statusesOf(issues []jiraservice.Issue) []string {
+	return distinctSorted(issues, func(i jiraservice.Issue) string { return i.Status })
+}
+
+func distinctSorted[T any](items []T, key func(T) string) []string {
 	set := map[string]struct{}{}
-	for _, iss := range issues {
-		set[iss.Status] = struct{}{}
+	for _, it := range items {
+		set[key(it)] = struct{}{}
 	}
 	out := make([]string, 0, len(set))
 	for s := range set {

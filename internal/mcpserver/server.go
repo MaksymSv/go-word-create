@@ -20,6 +20,7 @@ const (
 
 const instructions = `Read-only Jira reporting for sprints and AI-usage labels, plus one guarded write tool.
 Typical flow: list_teams -> list_sprints(team) -> get_sprint_issues(sprint_id, statuses?).
+sprint_issues takes sprint NAMES (several allowed) and returns the issue table, optionally as CSV.
 sprint_label_report takes sprint NAMES (exact, case-sensitive) and covers every configured team.
 set_issue_label changes Jira data: call it first with confirm=false, show the user the preview,
 and only call it again with confirm=true after the user explicitly approves.`
@@ -68,6 +69,14 @@ func New(cfg *config.Config, j Jira) *mcp.Server {
 			"with per-label counts/story points. Optionally filter by status; summaries cover the filtered set.",
 		Annotations: readOnly,
 	}, h.getSprintIssues)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name: "sprint_issues",
+		Description: "Issues of one or more sprints by exact name (same data as the get-sprint-issues command): type, key, summary, epic, " +
+			"story points, status, URL. Optional team and status filters. format=csv also returns CSV text and a suggested file name " +
+			"(<sprint>_<YYYY-MM-DD>.csv) per sprint; the server never writes files.",
+		Annotations: readOnly,
+	}, h.sprintIssues)
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "sprint_label_report",

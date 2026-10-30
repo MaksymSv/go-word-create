@@ -10,6 +10,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"go-word-create/internal/config"
+	"go-word-create/internal/issuecsv"
 	"go-word-create/internal/jiraservice"
 	"go-word-create/internal/sprintview"
 )
@@ -126,7 +127,7 @@ func (h *handler) getSprintIssues(_ context.Context, _ *mcp.CallToolRequest, in 
 	if err != nil {
 		return nil, getSprintIssuesOut{}, fmt.Errorf("failed to load sprint issues (sprintID=%d): %w", in.SprintID, err)
 	}
-	kept, unmatched := filterByStatus(view.Issues, in.Statuses)
+	kept, unmatched := filterByStatus(view.Issues, in.Statuses, func(i sprintview.Issue) string { return i.Status })
 	perLabel, total, unlabeled := summarize(kept, view.ConfiguredLabels)
 	return nil, getSprintIssuesOut{
 		SprintID:          in.SprintID,
@@ -312,5 +313,129 @@ func (h *handler) setIssueLabel(_ context.Context, _ *mcp.CallToolRequest, in se
 	}
 	out.Applied = true
 	out.Message = fmt.Sprintf("Applied: %s label %q on %s.", action, in.Label, key)
+	return nil, out, nil
+}
+
+// --- sprint_issues ---
+
+const (
+	formatJSON = "json"
+	formatCSV  = "csv"
+)
+
+type sprintIssuesIn struct {
+	Sprints  []string `json:"sprints" jsonschema:"exact, case-sensitive sprint names, e.g. [\"ST26.20\",\"PC26.20\"]"`
+	Team     string   `json:"team,omitempty" jsonschema:"restrict to one team's board and component; omit for all teams"`
+	Statuses []string `json:"statuses,omitempty" jsonschema:"only include issues in these statuses (case-insensitive); omit for all"`
+	Format   string   `json:"format,omitempty" jsonschema:"json (default) returns issue rows; csv additionally returns the CSV text and a suggested file name per sprint"`
+}
+
+type sprintIssueRow struct {
+	Type        string  `json:"type"`
+	Key         string  `json:"key"`
+	Summary     string  `json:"summary"`
+	Epic        string  `json:"epic"`
+	StoryPoints float64 `json:"storyPoints"`
+	Status      string  `json:"status"`
+	URL         string  `json:"url"`
+}
+
+type sprintIssuesResult struct {
+	Sprint            string           `json:"sprint"`
+	Count             int              `json:"count"`
+	StoryPoints       float64          `json:"storyPoints"`
+	AvailableStatuses []string         `json:"availableStatuses"`
+	UnmatchedStatuses []string         `json:"unmatchedStatuses,omitempty"`
+	Issues            []sprintIssueRow `json:"issues"`
+	FileName          string           `json:"fileName,omitempty"`
+	CSV               string           `json:"csv,omitempty"`
+}
+
+type sprintIssuesOut struct {
+	Sprints []sprintIssuesResult `json:"sprints"`
+}
+
+func hasComponent(i jiraservice.Issue, component string) bool {
+	for _, c := range i.Components {
+		if c == component {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *handler) sprintIssues(_ context.Context, _ *mcp.CallToolRequest, in sprintIssuesIn) (*mcp.CallToolResult, sprintIssuesOut, error) {
+	var names []string
+	for _, s := range in.Sprints {
+		for _, part := range strings.Split(s, ",") {
+			if t := strings.TrimSpace(part); t != "" {
+				names = append(names, t)
+			}
+		}
+	}
+	if len(names) == 0 {
+		return nil, sprintIssuesOut{}, fmt.Errorf("sprints must contain at least one sprint name")
+	}
+	format := strings.ToLower(strings.TrimSpace(in.Format))
+	if format == "" {
+		format = formatJSON
+	}
+	if format != formatJSON && format != formatCSV {
+		return nil, sprintIssuesOut{}, fmt.Errorf(`format must be "json" or "csv", got %q`, in.Format)
+	}
+
+	boards := h.cfg.GetAllBoardNames()
+	component := ""
+	if in.Team != "" {
+		team, err := h.findTeam(in.Team)
+		if err != nil {
+			return nil, sprintIssuesOut{}, err
+		}
+		boards = []string{team.BoardName}
+		component = team.ComponentName
+	}
+
+	now := time.Now()
+	out := sprintIssuesOut{Sprints: make([]sprintIssuesResult, 0, len(names))}
+	for _, name := range names {
+		all, err := h.jira.GetSprintIssues(h.cfg.ProjectKey, name, boards, h.cfg.JiraIssueTypes)
+		if err != nil {
+			return nil, sprintIssuesOut{}, fmt.Errorf("sprint %q: %w", name, err)
+		}
+		if component != "" {
+			scoped := make([]jiraservice.Issue, 0, len(all))
+			for _, iss := range all {
+				if hasComponent(iss, component) {
+					scoped = append(scoped, iss)
+				}
+			}
+			all = scoped
+		}
+
+		kept, unmatched := filterByStatus(all, in.Statuses, func(i jiraservice.Issue) string { return i.Status })
+		res := sprintIssuesResult{
+			Sprint:            name,
+			Count:             len(kept),
+			AvailableStatuses: statusesOf(all),
+			UnmatchedStatuses: unmatched,
+			Issues:            make([]sprintIssueRow, 0, len(kept)),
+		}
+		for _, iss := range kept {
+			res.StoryPoints += iss.StoryPoints
+			res.Issues = append(res.Issues, sprintIssueRow{
+				Type: iss.Type, Key: iss.Key, Summary: iss.Summary, Epic: iss.Epic,
+				StoryPoints: iss.StoryPoints, Status: iss.Status, URL: iss.URL,
+			})
+		}
+		if format == formatCSV {
+			var sb strings.Builder
+			if err := issuecsv.Write(&sb, kept); err != nil {
+				return nil, sprintIssuesOut{}, fmt.Errorf("sprint %q: failed to build CSV: %w", name, err)
+			}
+			res.CSV = sb.String()
+			res.FileName = issuecsv.FileName(name, now)
+		}
+		out.Sprints = append(out.Sprints, res)
+	}
 	return nil, out, nil
 }

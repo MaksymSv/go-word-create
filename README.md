@@ -225,6 +225,7 @@ make build-mcp
 | `list_teams` | Configured teams (component + board), tracked report labels, issue types |
 | `list_sprints` | Latest sprints of a team's board (default 5), with IDs |
 | `get_sprint_issues` | Issues of a sprint by ID, optional status filter, per-label counts and story points |
+| `sprint_issues` | Issues of one or more sprints by name (same data as `get-sprint-issues`), optional team/status filters; `format=csv` also returns CSV text and a suggested `<sprint>_<date>.csv` name per sprint (the server never writes files) |
 | `sprint_label_report` | Label report by sprint name(s), grouped by component (same data as `get-sprint-label-report -format full`) |
 | `month_issues` | Issues "In Progress" during a month, Closed vs Open per team |
 | `set_issue_label` | **Write.** Add/remove a tracked label on an issue. Without `confirm=true` it only returns a preview |

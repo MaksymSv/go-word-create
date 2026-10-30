@@ -20,6 +20,7 @@ This repo reads Jira (project, teams, boards and report labels come from `.env`)
 | Which teams / labels / issue types are configured? | `list_teams` |
 | What are a team's recent sprints? Need a sprint ID | `list_sprints(team, limit?)` |
 | Issues of one sprint, optionally by status, with per-label counts | `get_sprint_issues(sprint_id, statuses?)` |
+| Issue table (type, key, summary, epic, SP, status) for one or more sprints by name; CSV on request | `sprint_issues(sprints[], team?, statuses?, format?)` |
 | Label usage % for one or more sprints, by component | `sprint_label_report(sprints[], team?)` |
 | What was In Progress during a month; what closed | `month_issues(month "YYYY.MM", team?)` |
 | Add or remove a tracked label on an issue | `set_issue_label(issue_key, label, action, confirm)` |
@@ -29,6 +30,8 @@ This repo reads Jira (project, teams, boards and report labels come from `.env`)
 **Label report for Sprint N.** Call `sprint_label_report` with the exact sprint name(s). Names are case-sensitive and must match Jira exactly. If a name is not found, call `list_teams` then `list_sprints` for the relevant team and use the real name. Present per component: each label's count, count %, story points, SP %, the "labeled" totals, and the unlabeled issues.
 
 **Status breakdown for a team's sprint.** `list_teams` (confirm the component name), `list_sprints(team)` (pick the sprint, usually the newest active one), then `get_sprint_issues(sprint_id, statuses=[...])`. `availableStatuses` lists the real status names. `unmatchedStatuses` shows requested statuses that matched nothing, so check spelling instead of reporting zero. The summary covers only the filtered issues.
+
+**Sprint issue table / CSV.** Call `sprint_issues` with the exact sprint name(s); it mirrors `get-sprint-issues -sprint="A,B"`. For a CSV, pass `format="csv"`: each sprint comes back with `csv` text and a suggested `fileName`. The server cannot write files, so show the CSV or save it yourself under that name.
 
 **Month report.** `month_issues("2025.10")`. "Closed" means current status is exactly `Closed`. Everything else touched during the month is "Open". Issues qualify through the changelog (they were In Progress at some point in the month), not by sprint.
 

@@ -18,7 +18,7 @@ help:
 	@echo "  make build-web-dashboard                - Build web sprint labels dashboard"
 	@echo "  make build-mcp                          - Build MCP server for LLM clients (bin/mcp-jira-reports)"
 	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
-	@echo "  make run-sprint SPRINT=\"Sprint 16\" [OUTPUT=file.docx] [LOGONLY=1] - Run collecting sprint issues (OUTPUT, LOGONLY optional)"
+	@echo "  make run-sprint SPRINT=\"ST26.20,PC26.20\" [FORMAT=csv] [OUTPUT=file.docx] [CSV_DIR=dir] [LOGONLY=1] - Run collecting sprint issues (FORMAT=csv writes one file per sprint)"
 	@echo "  make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] - Run sprint label report"
 	@echo "  make run-web-dashboard [PORT=8080]      - Start web sprint labels dashboard"
 	@echo "  make clean              - Remove build artifacts"
@@ -83,10 +83,10 @@ run-month: build-month
 run-sprint: build-sprint
 	@if [ -z "$(SPRINT)" ]; then \
 		echo "Error: SPRINT parameter required"; \
-		echo "Usage: make run-sprint SPRINT=\"Sprint 16\" [OUTPUT=file.docx] [LOGONLY=1]"; \
+		echo "Usage: make run-sprint SPRINT=\"Sprint 16\" [OUTPUT=file.docx] [FORMAT=csv] [CSV_DIR=dir] [LOGONLY=1]"; \
 		exit 1; \
 	fi
-	$(OUTPUT_DIR)/get-sprint-issues -sprint="$(SPRINT)"$(if $(OUTPUT), -output="$(OUTPUT)")$(if $(LOGONLY), -debug)
+	$(OUTPUT_DIR)/get-sprint-issues -sprint="$(SPRINT)"$(if $(OUTPUT), -output="$(OUTPUT)")$(if $(FORMAT), -format="$(FORMAT)")$(if $(CSV_DIR), -output-dir="$(CSV_DIR)")$(if $(LOGONLY), -debug)
 
 # Start web sprint labels dashboard
 run-web-dashboard: build-web-dashboard
