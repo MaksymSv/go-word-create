@@ -67,8 +67,8 @@ func main() {
 			fmt.Println("\nIssues:")
 			for _, issue := range sprintIssues {
 				// Truncate strings that are too long
-				fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f\n",
-					issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints)
+				fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%s\n",
+					issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
 			}
 			fmt.Printf("\nTotal issues: %d\n", len(sprintIssues))
 		}
@@ -80,8 +80,8 @@ func main() {
 		// Create Word document
 		doc := word.NewDocument()
 		cfg := word.DefaultConfig()
-		cfg.ColumnHeaders = []string{"Type", "Key", "Summary", "Epic", "Story Points"}
-		cfg.ColumnWidths = []float64{5.5, 10.0, 44.5, 34.5, 5.5}
+		cfg.ColumnHeaders = []string{"Type", "Key", "Summary", "Epic", "Story Points", "Status"}
+		cfg.ColumnWidths = []float64{5.5, 9.0, 38.0, 29.0, 5.5, 13.0}
 		table := word.NewTable(&doc.WordDocument, cfg)
 		table.AddHeaderRow()
 
@@ -93,6 +93,7 @@ func main() {
 				issue.Summary,
 				issue.Epic,
 				strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
+				issue.Status,
 			}
 			table.AddDataRow(data)
 		}
