@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-29
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "I need to create a feature that will collect the workitems in Jira from a specified sprint (same like get-sprint-issues), however I need a different output. I need to calculate issues (count and sum of story points) with a particular label assigned. In short format we need to see only: label name | issues count | sum of story points. In full format I need to see all issues in this group (line by line) like: label name | issues count | sum of story points | issue key | Summary | issue SP. The list of labels to aggregate should be configured. The order of labels is important. Provide the report in that configured order. I also need to list all the rest of issues not labeled with any of those configured labels in a table: Issue key | Summary | SP. Please keep high-level processing flow by jira components like in get-sprint-issues module. The list of labels for start: ai-assisted, ai-assisted-ba, ai-assisted-dev, ai-assisted-qa."
 

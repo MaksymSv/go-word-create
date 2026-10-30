@@ -20,7 +20,7 @@ Add a status filter bar (dynamic pill buttons) above the existing issues table i
 
 **Target Platform**: macOS / Linux server (darwin + linux amd64); launched as a local CLI binary.
 
-**Project Type**: Web service (HTTP server binary) + embedded SPA — extending existing `internal/dashboard` and `web/` packages.
+**Project Type**: Web service (HTTP server binary) + embedded SPA — extending existing `internal/dashboard` and `internal/dashboard/web/` packages.
 
 **Performance Goals**: Table re-renders within 1 second when status pills change (SC-001); no network round-trip for filtering (client-side only).
 
@@ -36,7 +36,7 @@ Add a status filter bar (dynamic pill buttons) above the existing issues table i
 |-----------|--------|-------|
 | I. CLI-First | ✅ PASS | This feature modifies the HTTP dashboard only; no CLI binaries are changed. The CLI-first design is unaffected. |
 | II. Environment-Driven | ✅ PASS | No new configuration needed. All behavior controlled by existing `.env` variables. |
-| III. Package Separation | ✅ PASS | Only `internal/dashboard/handler.go` and `web/app.js` are modified. No new packages. No circular imports. |
+| III. Package Separation | ✅ PASS | Only `internal/dashboard/handler.go` and `internal/dashboard/web/app.js` are modified. No new packages. No circular imports. |
 | IV. Consistent Document Output | ✅ N/A | This feature generates no Word documents. |
 | V. Observability | ✅ PASS | No new HTTP endpoints means no new logging requirements. Existing request logging covers unchanged routes. |
 | Tech Stack | ✅ PASS | No new dependencies; extends existing vanilla JS frontend. |
@@ -64,14 +64,14 @@ internal/
 └── dashboard/
     └── handler.go       ← NO CHANGES (existing endpoints serve all needed data)
 
-web/
+internal/dashboard/web/
 ├── index.html           ← Add: status-filter-bar container above #content
 ├── style.css            ← Add: .status-filter-bar, .pill, .pill.active styles
 ├── app.js               ← Add: statusFilter state, renderStatusPills(), filterIssues(), renderSummaryRow()
 └── icons/               ← NO CHANGES
 ```
 
-**Structure Decision**: Minimal change — only `web/index.html`, `web/style.css`, and `web/app.js` are modified. The Go backend (`internal/dashboard/handler.go`) requires **zero changes** because `GET /api/sprints/{sprintID}/issues` already returns each issue with its `status` field. All filtering and summary logic is client-side JavaScript.
+**Structure Decision**: Minimal change — only `internal/dashboard/web/index.html`, `internal/dashboard/web/style.css`, and `internal/dashboard/web/app.js` are modified. The Go backend (`internal/dashboard/handler.go`) requires **zero changes** because `GET /api/sprints/{sprintID}/issues` already returns each issue with its `status` field. All filtering and summary logic is client-side JavaScript.
 
 ---
 
@@ -212,9 +212,9 @@ No backend data model changes. The existing `DashboardIssue` struct already has 
 
 | File | Change |
 |------|--------|
-| `web/index.html` | Add `<div id="status-filter-bar">` above the `#content` div |
-| `web/style.css` | Add `.status-filter-bar`, `.pill`, `.pill.active`, `.summary-row` styles |
-| `web/app.js` | Add `selectedStatuses` to state; add `renderStatusPills()`, `onStatusPillClick()`, `renderSummaryRow()`; modify `renderTable()` to call these after table creation |
+| `internal/dashboard/web/index.html` | Add `<div id="status-filter-bar">` above the `#content` div |
+| `internal/dashboard/web/style.css` | Add `.status-filter-bar`, `.pill`, `.pill.active`, `.summary-row` styles |
+| `internal/dashboard/web/app.js` | Add `selectedStatuses` to state; add `renderStatusPills()`, `onStatusPillClick()`, `renderSummaryRow()`; modify `renderTable()` to call these after table creation |
 
 ### Files NOT Changed
 
@@ -242,3 +242,21 @@ No changes needed. Existing `make build` compiles the unchanged dashboard binary
 7. Verify summary row recalculates when pills are toggled.
 8. Verify dark theme renders pills and summary row correctly.
 9. Verify empty sprint (zero issues) does not render a status filter bar.
+
+---
+
+## As-Built Notes (reconciled with the code on 2026-10-30)
+
+The feature shipped in commit `17144ee` (2026-07-01) with a follow-up fix in `faebf4a`. Differences from the design above:
+
+| Area | Plan | As built |
+|------|------|----------|
+| Paths | `web/*` | `internal/dashboard/web/*` (the `//go:embed web` directory lives inside `internal/dashboard`) |
+| Issue data for filtering | Stateless; filter the in-memory list | Issues are cached in `localStorage` under `dashboardIssues`; `getFilteredIssues()` reads them back |
+| Row filtering | Hide/show rows | Rows get a `.hidden` class; the status is read from table cell index 6 (Status moved right after feature 006 added the Implementer column) |
+| `renderStatusPills` | `(statuses, configuredLabels)` | `(statuses)`; `configuredLabels` is kept in `state.configuredLabels` |
+| Summary row | One cell per label inside `<tfoot>` | One `<tfoot>` row: a "Summary" cell (colspan 5) plus one cell holding a flex list of `label: N (X SP)` items; omitted when no issues match |
+| Empty filter result | "No issues match selected statuses" message (T012) | Not implemented; table body is empty and the summary row is omitted |
+| Stale filter bar | Not rendered for empty sprints | Not rendered for empty sprints, but the previous sprint's pills are not cleared on team/sprint switch (T013 partial) |
+| CSS tokens | `--color-surface`, `#fff` active text | `--color-btn-sprint` background and `--color-btn-team-active-bg` for active pills; filter bar has a left border and padding |
+

@@ -1,7 +1,15 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0
+Version change: 1.1.0 → 1.2.0
+Amendment 1.2.0 (MINOR, 2026-10-30): brought the constitution in line with the code after
+several features were built outside the Spec Kit flow (MCP server, multi-sprint input, CSV
+output). Principle III now lists the real package set (sprintview, labelreport, issuecsv,
+mcpserver, dashboard) and marks internal/server as a legacy, unused sample. Principle V
+now says what -debug means for long-running servers and for stdout-only commands.
+Principle IV is scoped to Word output. Development Workflow gained a retroactive-spec rule.
+Known deviation still open: cmd/get-sprint-label-report has no -debug flag (exempted by the
+new stdout-only wording; revert that wording if a flag should be added instead).
 Amendment 1.1.0 (MINOR): added MCP server (stdio) as a third surface and the
 official MCP Go SDK to core dependencies.
 Previous: (template / unversioned) → 1.0.0
@@ -65,16 +73,24 @@ Business logic MUST live in `internal/` sub-packages; `cmd/` packages MUST conta
 wiring (flag parsing, env loading, calling `internal/` services). Cross-cutting concerns
 (config, logging) belong in their own `internal/` packages.
 
+- `internal/config` — `.env` loading and parsing; MUST NOT depend on other `internal/` packages.
 - `internal/jiraservice` — Jira API client; MUST have no dependency on Word generation.
 - `internal/word` — document generation; MUST have no dependency on Jira or HTTP.
-- `internal/server` — HTTP handler; MUST delegate to service packages and MUST NOT
-  contain business logic.
+- `internal/sprintview`, `internal/labelreport`, `internal/issuecsv` — shared reporting
+  logic reused by every surface; MUST have no dependency on HTTP, MCP, or Word.
+- `internal/dashboard` (HTTP handlers plus the embedded SPA in `internal/dashboard/web/`)
+  and `internal/mcpserver` (MCP tools) — surface adapters; MUST delegate to the shared
+  packages above, MUST NOT contain business logic, and MUST NOT import each other.
+- `internal/server` — legacy sample Word-document handler, not wired into any `cmd/`
+  binary. Do not build on it; remove it when convenient.
 - Circular imports between `internal/` packages are forbidden.
 
 ### IV. Consistent Document Output
 
 Every generated Word document MUST conform to the project's formatting standard so that
-output is predictable and visually uniform across all commands and teams.
+output is predictable and visually uniform across all commands and teams. The standard
+applies to Word output only; CSV export (`internal/issuecsv`) is a plain data format with
+no styling requirements.
 
 - **Font**: Aptos Narrow, 8 pt.
 - **Borders**: single auto-color borders at 0,5pt on all table cells.
@@ -92,8 +108,11 @@ output is predictable and visually uniform across all commands and teams.
 All commands and the HTTP server MUST provide enough runtime visibility to diagnose
 issues without requiring a debugger.
 
-- Every `cmd/` binary MUST support a `-debug` flag (or `LOGONLY` env var) that prints
-  structured issue data to stdout instead of writing a file.
+- Every `cmd/` binary that writes a file MUST support a `-debug` flag (or `LOGONLY` env
+  var) that prints structured issue data to stdout instead of writing the file. For the
+  long-running servers (`web-sprint-labels-report`, `mcp-jira-reports`) `-debug` enables
+  verbose logging to stderr. Commands that already print only to stdout
+  (`get-sprint-label-report`) are exempt.
 - The HTTP server MUST log each request (method, path, status, duration).
 - Errors from Jira or document-generation MUST include context (team name, sprint/month,
   Jira issue key where applicable) — bare "failed" messages are forbidden.
@@ -125,6 +144,11 @@ issues without requiring a debugger.
   - `make lint` — zero lint errors (golangci-lint auto-installed if absent).
   - `make test` — all tests pass.
   - `make build` — all binaries compile without warnings.
+- **Retroactive specs**: work done outside the Spec Kit flow (direct LLM chat, hotfixes)
+  SHOULD be followed by a short spec in `specs/NNN-name/` whose `Status` reads
+  `Implemented (retroactive …)`, so the specs keep describing the real system. When code
+  and an older spec diverge, add an "As-Built Notes" section to that spec's `plan.md`
+  instead of rewriting history.
 - **PR scope**: one logical change per PR. Document-formatting changes, Jira client
   changes, and server changes SHOULD be in separate PRs unless tightly coupled.
 - **Commit messages**: imperative present tense, ≤72 chars in the subject line.
@@ -151,4 +175,4 @@ is resolved in favour of the constitution.
 section that explicitly confirms or flags violations before Phase 0 research begins.
 Violations MUST be justified in the Complexity Tracking table of the plan.
 
-**Version**: 1.1.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-10-08
+**Version**: 1.2.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-10-30

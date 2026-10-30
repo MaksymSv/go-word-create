@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-02
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "I want to extend funtionaly of sprint-label-report. I need to calculate percentage of issues marked with different labels to total count of issues/SP in the sprint. So, the list of columns shlould be Label | Count | Count,% | Total SP | Total SP,%. There also final (Total) line shoulbe added with totals by % columns. Do not add totals by Count and Total SP as they don't have practical sense."
 

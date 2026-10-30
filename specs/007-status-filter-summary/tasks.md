@@ -10,7 +10,7 @@
 
 **Purpose**: Add the status filter bar container to the dashboard HTML shell.
 
-- [ ] T001 [US1] Add `<div id="status-filter-bar">` container above `#content` in `internal/dashboard/web/index.html`
+- [x] T001 [US1] Add `<div id="status-filter-bar">` container above `#content` in `internal/dashboard/web/index.html`
 
 **Checkpoint**: HTML shell has the container element; CSS will style it, JS will populate it.
 
@@ -20,9 +20,9 @@
 
 **Purpose**: Add status filter bar and summary row styles matching the existing design system (CSS custom properties, dark theme support).
 
-- [ ] T002 [P] Add `#status-filter-bar` container styles in `internal/dashboard/web/style.css`
-- [ ] T003 [P] Add `.pill` and `.pill.active` button styles in `internal/dashboard/web/style.css`
-- [ ] T004 [P] Add `.summary-row` table footer styles in `internal/dashboard/web/style.css`
+- [x] T002 [P] Add `#status-filter-bar` container styles in `internal/dashboard/web/style.css`
+- [x] T003 [P] Add `.pill` and `.pill.active` button styles in `internal/dashboard/web/style.css`
+- [x] T004 [P] Add `.summary-row` table footer styles in `internal/dashboard/web/style.css`
 
 **Checkpoint**: All visual elements (filter bar, pills, summary row) have CSS rules. Dark theme styles use existing CSS custom properties (`--color-bg`, `--color-surface`, `--color-text`, `--color-text-muted`, `--color-border`, `--color-btn-team-active-bg`).
 
@@ -36,11 +36,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Extend `state` object in `internal/dashboard/web/app.js` with `selectedStatuses: new Set()` and clear it on team/sprint switch
-- [ ] T006 [US1] Implement `renderStatusPills(statuses, configuredLabels)` in `internal/dashboard/web/app.js` — extracts unique statuses from loaded issues, sorts alphabetically, creates pill buttons with `data-status` attributes, appends to `#status-filter-bar`
-- [ ] T007 [US1] Implement `onStatusPillClick(e)` in `internal/dashboard/web/app.js` — toggles `data-status` in `state.selectedStatuses`, updates pill `.active` class, triggers table re-filter
-- [ ] T008 [US1] Modify `renderTable()` in `internal/dashboard/web/app.js` to call `renderStatusPills()` after table creation (only when issues > 0)
-- [ ] T009 [US1] Implement `applyFilter()` in `internal/dashboard/web/app.js` — filters the `issues` array by `status` matching `state.selectedStatuses`, re-renders table body rows (hide/show via `tr.hidden` class), re-renders summary row
+- [x] T005 [US1] Extend `state` object in `internal/dashboard/web/app.js` with `selectedStatuses: new Set()` and clear it on team/sprint switch
+- [x] T006 [US1] Implement `renderStatusPills(statuses, configuredLabels)` in `internal/dashboard/web/app.js` — extracts unique statuses from loaded issues, sorts alphabetically, creates pill buttons with `data-status` attributes, appends to `#status-filter-bar`
+- [x] T007 [US1] Implement `onStatusPillClick(e)` in `internal/dashboard/web/app.js` — toggles `data-status` in `state.selectedStatuses`, updates pill `.active` class, triggers table re-filter
+- [x] T008 [US1] Modify `renderTable()` in `internal/dashboard/web/app.js` to call `renderStatusPills()` after table creation (only when issues > 0)
+- [x] T009 [US1] Implement `applyFilter()` in `internal/dashboard/web/app.js` — filters the `issues` array by `status` matching `state.selectedStatuses`, re-renders table body rows (hide/show via `tr.hidden` class), re-renders summary row
 
 **Checkpoint**: User Story 1 is fully functional — status pills render, toggle, and filter table rows in real time.
 
@@ -54,9 +54,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Implement `renderSummaryRow(filteredIssues, configuredLabels)` in `internal/dashboard/web/app.js` — computes per-label `{ count, totalSP }` from filtered issues, appends `<tfoot><tr class="summary-row">` to the table
-- [ ] T011 [US2] Integrate `renderSummaryRow()` into `applyFilter()` so it recalculates whenever pills are toggled
-- [ ] T012 [US2] Handle edge case: when `filteredIssues` is empty (all pills selected but no matches), display "No issues match selected statuses" in the summary row instead of the table
+- [x] T010 [US2] Implement `renderSummaryRow(filteredIssues, configuredLabels)` in `internal/dashboard/web/app.js` — computes per-label `{ count, totalSP }` from filtered issues, appends `<tfoot><tr class="summary-row">` to the table
+- [x] T011 [US2] Integrate `renderSummaryRow()` into `applyFilter()` so it recalculates whenever pills are toggled
+- [ ] T012 [US2] Handle edge case: when `filteredIssues` is empty (all pills selected but no matches), display "No issues match selected statuses" in the summary row instead of the table — **NOT IMPLEMENTED (reconciled 2026-10-30)**: when no issue matches, the summary row is simply omitted; no "No issues match selected statuses" message is shown.
 
 **Checkpoint**: User Story 2 is fully functional — summary row shows correct counts and story points for any filter combination.
 
@@ -66,11 +66,11 @@
 
 **Purpose**: Handle edge cases, ensure dark theme consistency, verify no regression on existing functionality.
 
-- [ ] T013 Edge case: When sprint has zero issues, do NOT render status filter bar or summary row (existing "No issues found" message shown as before)
-- [ ] T014 Edge case: When sprint has only one unique status, render all statuses as pills (not just the matching one); selecting non-matching statuses shows empty state
-- [ ] T015 Edge case: Handle issues with null/empty `status` — these match no status pill; shown when no pills selected, hidden when any pill selected
-- [ ] T016 Verify dark theme: status filter bar pills and summary row render correctly in dark theme (uses CSS custom properties consistently)
-- [ ] T017 Verify no regression: existing label toggle buttons, team/sprint selection, theme toggle all work unchanged
+- [ ] T013 Edge case: When sprint has zero issues, do NOT render status filter bar or summary row (existing "No issues found" message shown as before) — **PARTIAL (reconciled 2026-10-30)**: an empty sprint shows "No issues found" and renders neither pills nor summary, but `#status-filter-bar` is not cleared on team/sprint switch, so pills from the previously loaded sprint stay visible.
+- [ ] T014 Edge case: When sprint has only one unique status, render all statuses as pills (not just the matching one); selecting non-matching statuses shows empty state — **Not verified**; as built, pills are derived from the statuses present in the loaded issues only.
+- [ ] T015 Edge case: Handle issues with null/empty `status` — these match no status pill; shown when no pills selected, hidden when any pill selected — **Not verified**; empty `status` values are not handled specially in `renderStatusPills()`.
+- [ ] T016 Verify dark theme: status filter bar pills and summary row render correctly in dark theme (uses CSS custom properties consistently) — **Not verified in a browser**; pills use CSS custom properties.
+- [ ] T017 Verify no regression: existing label toggle buttons, team/sprint selection, theme toggle all work unchanged — **Not verified in a browser** (no automated frontend tests exist).
 
 **Checkpoint**: All edge cases handled, dark theme verified, no regression on existing features.
 

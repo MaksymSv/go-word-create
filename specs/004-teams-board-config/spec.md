@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-05
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "I want to change configuration (in .env) for teams (TEAMS) to have both the team name and the board name (JIRA_BOARD_NAME) the same configuration parameter. You can use the following format: TEAMS=PROCESSING|"PROCESSING Team",STABLETEK|"STABLETEK Team". So the unused JIRA_BOARD_NAME should be removed. Apply this change in configuration on to all cmd/* files. Additionaly: get-sprint-label-report works with only one team board name now to build report. Change that this to generate reports for all jira boards in TEAM configuration in cycle (one by one)."
 

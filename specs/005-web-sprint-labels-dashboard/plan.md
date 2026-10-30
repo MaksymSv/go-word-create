@@ -97,6 +97,8 @@ bin/
 
 **Structure Decision**: Single-project layout extending existing `internal/` and `cmd/` directories. Static web assets live at repo root under `web/` so they can be referenced by the `//go:embed web` directive in `internal/dashboard/handler.go`. No frontend build directory or `dist/` folder.
 
+> **As built (noted 2026-10-30)**: `//go:embed` cannot reference a parent directory, so the assets live in `internal/dashboard/web/`, not in a repo-root `web/`. Later specs (006, 007) use the `internal/dashboard/web/` path.
+
 ---
 
 ## Phase 0: Research — COMPLETE

@@ -48,9 +48,9 @@ open http://localhost:8080
 
 | File | Change |
 |------|--------|
-| `web/index.html` | Added `<div id="status-filter-bar">` |
-| `web/style.css` | Added `.pill`, `.pill.active`, `.summary-row` CSS |
-| `web/app.js` | Added status filtering and summary row logic |
+| `internal/dashboard/web/index.html` | Added `<div id="status-filter-bar">` |
+| `internal/dashboard/web/style.css` | Added `.pill`, `.pill.active`, `.summary-row` CSS |
+| `internal/dashboard/web/app.js` | Added status filtering and summary row logic |
 
 ## Manual Testing
 

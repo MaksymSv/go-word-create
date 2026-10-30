@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-26
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Add a status filter bar (pill buttons for 'To Do', 'In Progress', 'Closed', etc.) above the issues table, plus a totals row below showing count and story points per label for the filtered view."
 

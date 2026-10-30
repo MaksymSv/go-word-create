@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-05
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "I want to create new cmd/web-sprint-labels-report. I need to have a web dashboard in browser with the following structure. The page should contain a toolbar and main information area below. The toolbar should contain two sections of buttons. Left section should contain the list of teams (component names from configuration) as buttons stacked left to right. The first team button should be selected (like pushed down) by default. The second part of the toolbar should be a list of buttons (stacked left to right) with the names of the last 5 sprints in the jira board associated with the selected component (on the left side of the toolbar). By clicking some particular sprint button the main section of the dashboard should load the list of issues (from jira) in the selected sprint as a table. The format of issue table line should be IssueType|IssueKey|Summary|Epic Name|Story Points|Status|Labels. The type of issue should be displayed as Jira issue icon. Use svg format. The column Labels should contain the list of labels from configured list which are assigned to particular issue but limited by the list of labels in the configuration. Each label should be represented as a small button. Pushing this button the label should be assigned to the target jira issue. The dashboard should have a dark and light theme. Put the theme switcher to the right most side of the toolbar."
 
