@@ -38,6 +38,7 @@ func NewHandler(cfg *config.Config, jira *jiraservice.JiraService) *DashboardHan
 func (h *DashboardHandler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(h.webFS)))
+	mux.HandleFunc("GET /favicon.ico", h.serveFavicon)
 	mux.HandleFunc("GET /", h.serveIndex)
 	mux.HandleFunc("GET /api/teams", h.getTeams)
 	mux.HandleFunc("GET /api/teams/{component}/sprints", h.getSprints)
@@ -52,6 +53,11 @@ func (h *DashboardHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.ServeFileFS(w, r, h.webFS, "index.html")
+}
+
+// serveFavicon answers the default /favicon.ico request that browsers make.
+func (h *DashboardHandler) serveFavicon(w http.ResponseWriter, r *http.Request) {
+	http.ServeFileFS(w, r, h.webFS, "favicon.svg")
 }
 
 func (h *DashboardHandler) getTeams(w http.ResponseWriter, r *http.Request) {
