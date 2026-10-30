@@ -315,39 +315,70 @@ func createFilterMap(issuesTypes []string) map[string]struct{} {
 	return typeFilter
 }
 
-// resolveImplementer returns the display name of the assignee at the first "In
-// Review." status transition in the issue's changelog. Falls back to the
-// current assignee, then to an empty string.
+const (
+	implementerPrimaryStatus  = "In Progress"
+	implementerFallbackStatus = "In Review."
+)
+
+// resolveImplementer returns the display name of the assignee just before the
+// issue first moved to "In Progress". If there was none, it uses the assignee
+// just before the first move to "In Review."; then the current assignee; then an
+// empty string. An assignee set in the same changelog entry as the move counts,
+// and so does the assignee the issue was created with (Jira logs no entry for
+// it, so it is read from the previous value of the first assignee change, or
+// from the current assignee when it never changed).
 func resolveImplementer(issue jira.Issue) string {
+	current := ""
+	if issue.Fields != nil && issue.Fields.Assignee != nil {
+		current = issue.Fields.Assignee.DisplayName
+	}
 	if issue.Changelog == nil {
-		if issue.Fields.Assignee != nil {
-			return issue.Fields.Assignee.DisplayName
-		}
-		return ""
+		return current
 	}
 
-	currentAssignee := ""
+	assignee := initialAssignee(issue.Changelog.Histories, current)
+	primarySeen, fallbackSeen := false, false
+	fallback := ""
 	for _, history := range issue.Changelog.Histories {
-		// First pass within this entry: track latest assignee change.
+		// Assignee changes of an entry apply before its status changes.
 		for _, item := range history.Items {
 			if strings.EqualFold(item.Field, "assignee") {
-				currentAssignee = item.ToString
+				assignee = item.ToString
 			}
 		}
-		// Second pass: detect first transition to "In Review.".
 		for _, item := range history.Items {
-			if strings.EqualFold(item.Field, "status") &&
-				strings.EqualFold(item.ToString, "in review.") {
-				return currentAssignee
+			if !strings.EqualFold(item.Field, "status") {
+				continue
+			}
+			if !primarySeen && strings.EqualFold(item.ToString, implementerPrimaryStatus) {
+				primarySeen = true
+				if assignee != "" {
+					return assignee
+				}
+			} else if !fallbackSeen && strings.EqualFold(item.ToString, implementerFallbackStatus) {
+				fallbackSeen = true
+				fallback = assignee
 			}
 		}
 	}
 
-	// Issue never reached "In Review." — use current assignee.
-	if issue.Fields.Assignee != nil {
-		return issue.Fields.Assignee.DisplayName
+	if fallback != "" {
+		return fallback
 	}
-	return ""
+	return current
+}
+
+// initialAssignee returns the assignee the issue was created with: the previous
+// value of the first assignee change, or current when the assignee never changed.
+func initialAssignee(histories []jira.ChangelogHistory, current string) string {
+	for _, history := range histories {
+		for _, item := range history.Items {
+			if strings.EqualFold(item.Field, "assignee") {
+				return item.FromString
+			}
+		}
+	}
+	return current
 }
 
 // GetIssuesFromSprintWithChangelog fetches all issues in a sprint (via JQL so

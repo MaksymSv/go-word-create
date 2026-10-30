@@ -6,6 +6,8 @@
 
 **Status**: Implemented
 
+> **Superseded**: the rule for resolving the implementer is replaced by [`specs/010-implementer-resolution`](../010-implementer-resolution/spec.md). The column and its position are unchanged.
+
 **Input**: User description: "I need to add "Implementer" column after Epic column. This column should indicate a Name of the assignee of the issue at the moment issue was in "In Progress" state. If issue was not In Progress yet, the current assignee should be used."
 
 ## Clarifications

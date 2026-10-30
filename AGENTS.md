@@ -45,7 +45,7 @@ internal/
   dashboard/            HTTP handlers; embedded SPA in internal/dashboard/web/ (vanilla JS, no build step)
   mcpserver/            MCP tool definitions, handlers, report shaping
   server/               Leftover sample .docx handler; not wired into any cmd
-specs/NNN-name/         Spec Kit feature specs and plans (001-009; 008 and 009 are retroactive)
+specs/NNN-name/         Spec Kit feature specs and plans (001-010; 008 and 009 are retroactive)
 .specify/               Spec Kit templates, scripts, constitution
 .claude/skills/         Project skills (speckit-*, jira-sprint-reports)
 ```
