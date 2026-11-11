@@ -12,7 +12,8 @@ Guidance for AI coding agents working in this repository. Human-oriented docs li
 | CLI | `get-sprint-issues` | `cmd/get-sprint-issues-from-jira` | Issues of one or more sprints to Word (`-format docx`) or CSV (`-format csv`, one file per sprint) |
 | CLI | `get-sprint-label-report` | `cmd/get-sprint-label-report` | Label/AI-usage report across all teams (`-format short\|full`) |
 | CLI | `fill-sprint-chart-xlsx` | `cmd/fill-sprint-chart-xlsx` | Fills the empty sprint columns of `proj-docs/AI Assisted Work Items Chart.xlsx` with label-report percentages (`-file`, `-output`, `-dry-run`) |
-| HTTP | `web-sprint-labels-report` | `cmd/web-sprint-labels-report` | Browser dashboard that also writes labels back to Jira |
+| HTTP | `web-sprint-labels-report` | `cmd/web-sprint-labels-report` | Browser dashboard that also writes labels back to Jira; also serves the delivery dashboard at `/delivery` |
+| CLI | `get-delivery-report` | `cmd/get-delivery-report` | Delivery metrics (velocity, backlog, lead/cycle time, bug trends) per team as JSON (`-team`, `-sprints`, `-refresh`) |
 | MCP (stdio) | `mcp-jira-reports` | `cmd/mcp-jira-reports` | Typed JSON tools for LLM clients; registered in `.mcp.json` |
 
 ## Commands
@@ -28,7 +29,8 @@ make run-sprint SPRINT="ST26.20,PC26.20" [FORMAT=csv] [CSV_DIR=dir] [LOGONLY=1]
 make run-month MONTH=2025.10 [LOGONLY=1]
 make run-sprint-label-report SPRINT="Sprint 16" [FORMAT=full]
 make run-chart [FILE=book.xlsx] [OUTPUT=copy.xlsx] [DRYRUN=1]
-make run-web-dashboard [PORT=8080]
+make run-web-dashboard [PORT=8080]       # labels at /, delivery dashboard at /delivery
+make run-delivery-report [TEAM=PROCESSING] [SPRINTS=6] [REFRESH=1]
 ```
 
 Before finishing any change: `make fmt`, `make lint`, `make test`, `make build` must all pass (constitution gate). `go vet ./...` and `go test ./...` are clean at the time of writing.
@@ -46,10 +48,11 @@ internal/
   issuecsv/             CSV writer and <sprint>_<YYYY-MM-DD>.csv file naming
   word/                 Word table/document generation (gooxml)
   monthreport/          Month report: Closed/Open split and Word document (shared by CLI and MCP)
-  dashboard/            HTTP handlers; embedded SPA in internal/dashboard/web/ (vanilla JS, no build step)
+  deliverystats/        Delivery metrics per team (velocity, commitment, backlog, lead/cycle, bug trends) + closed-sprint disk cache; no HTTP
+  dashboard/            HTTP handlers; embedded SPA in internal/dashboard/web/ (vanilla JS, no build step; hand-written SVG charts in charts.js)
   mcpserver/            MCP tool definitions, handlers, report shaping
   server/               Leftover sample .docx handler; not wired into any cmd
-specs/NNN-name/         Spec Kit feature specs and plans (001-010; 008 and 009 are retroactive)
+specs/NNN-name/         Spec Kit feature specs and plans (001-012; 008 and 009 are retroactive)
 .specify/               Spec Kit templates, scripts, constitution
 .claude/skills/         Project skills (speckit-*, jira-sprint-reports)
 ```
@@ -64,7 +67,9 @@ Optional, with defaults: `JIRA_EPIC_FIELD` (`customfield_14500`), `JIRA_SP_FIELD
 
 `TEAMS` format: `COMPONENT|"Board Display Name",...`. The component filters issues; the board name resolves sprints. Without `|`, the component name is used for both.
 
-Known doc drift: `.env.example` omits `REPORT_LABELS` and `ISSUE_TYPES`, and the README shows `OUTPUT_FILE` where the code reads `DEFAULT_OUTPUT_FILE`. The constitution requires `.env.example` to list every variable, so fix it when touching config.
+Delivery dashboard settings (all optional): `DELIVERY_SPRINT_COUNT` (6), `DELIVERY_BUG_DAYS` (30), `DELIVERY_CACHE_DIR` (`.cache/delivery`, gitignored), `DELIVERY_CACHE_TTL` (`15m`), `DELIVERY_COMPLETED_RESOLUTIONS` (empty = every resolution counts).
+
+Keep `.env.example` listing every variable (the constitution requires it).
 
 ## Rules that are easy to break
 
@@ -77,6 +82,7 @@ Known doc drift: `.env.example` omits `REPORT_LABELS` and `ISSUE_TYPES`, and the
 - **Word formatting is a standard** applied identically on every document path: Aptos Narrow 8 pt; single auto-color borders at 0.5 pt (the README says 1 pt, the constitution says 0.5); header row `#0070C0` with white non-bold text; cell margins top/bottom 0 and left/right 1.5 mm; Heading 1 in Trebuchet MS 16 pt small caps; page break before every section heading after the first. Change all code paths together.
 - **Business logic goes in `internal/`**, not in `cmd/` and not in HTTP handlers.
 - **Dependencies:** use `go-jira` for Jira, `gooxml` for OOXML, `modelcontextprotocol/go-sdk` for MCP. Do not add a second library for the same job.
+- **Delivery stats are Jira-only.** The `delivery_central` MCP is not callable from Go and covers just two of the seven charts for one team, so it is only a cross-check (fixed bugs match exactly, logged bugs and lead time are close, cycle time differs; see spec 012). Closed-sprint values are cached in `DELIVERY_CACHE_DIR`; changing what a cached value means requires bumping `cacheVersion` in `internal/deliverystats/cache.go`. Sprint IDs are not chronological on every board, so order sprints by start date.
 - **Dashboard frontend is vanilla JS** embedded with `//go:embed web` and served at `/static/`; theme and the last issue list are kept in `localStorage`. There is no bundler or JS test setup, so verify UI changes in a browser (`make run-web-dashboard`).
 
 ## Testing

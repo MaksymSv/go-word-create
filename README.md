@@ -56,8 +56,10 @@ JIRA_EPIC_FIELD=customfield_10014
 JIRA_SP_FIELD=customfield_10015
 JIRA_COMPONENT_FIELD=components
 TEAMS=PROCESSING|"PROCESSING Team",STABLETEK|"STABLETEK Team"
-OUTPUT_FILE=output.docx
+DEFAULT_OUTPUT_FILE=output.docx
 ```
+
+The delivery dashboard has its own optional `DELIVERY_*` settings; see `.env.example`.
 
 ### Getting Jira API Token
 
@@ -88,6 +90,7 @@ make build-month
 make build-sprint
 make build-sprint-label-report
 make build-web-dashboard
+make build-delivery-report
 make build-mcp
 
 # Run commands
@@ -101,6 +104,7 @@ make run-chart DRYRUN=1                   # Show what would be filled, write not
 make run-chart FILE=book.xlsx OUTPUT=copy.xlsx
 make run-web-dashboard                    # Start dashboard on port 8080
 make run-web-dashboard PORT=9090          # Start dashboard on custom port
+make run-delivery-report TEAM=STABLETEK SPRINTS=6   # Print delivery metrics as JSON
 
 # Show all available targets
 make help
@@ -123,6 +127,9 @@ go build -o bin/fill-sprint-chart-xlsx ./cmd/fill-sprint-chart-xlsx
 
 # Build web dashboard
 go build -o bin/web-sprint-labels-report ./cmd/web-sprint-labels-report
+
+# Build delivery metrics report
+go build -o bin/get-delivery-report ./cmd/get-delivery-report
 
 # Build MCP server
 go build -o bin/mcp-jira-reports ./cmd/mcp-jira-reports
@@ -226,6 +233,34 @@ Then open `http://localhost:8080` in a browser.
 - Clicking a label button adds or removes that label on the Jira issue instantly
 - Dark/light theme toggle at the far right of the toolbar; theme is remembered across sessions
 
+### Delivery Dashboard
+
+The same server also serves a project delivery dashboard at `http://localhost:8080/delivery` (linked from the toolbar of both pages). It has one tab per team in `TEAMS`, and each tab shows seven charts for the last N closed sprints (default 6, set with `DELIVERY_SPRINT_COUNT` or the "Sprints" pills):
+
+1. **Velocity**: committed vs. completed story points per sprint, plus the average of completed over the last 3 sprints
+2. **Commitment rate**: completed ÷ committed, in %
+3. **Backlog health**: story points of open issues outside any sprint when the sprint started (hover for issue count, unestimated issues and runway in sprints)
+4. **Lead and cycle time**: average days for issues resolved in the sprint (lead = created → resolved, cycle = first "In Progress" → resolved)
+5. **Open bugs**: bugs not yet closed at the end of each of the last 30 days (`DELIVERY_BUG_DAYS`)
+6. **Bug dynamics**: bugs logged vs. fixed per sprint
+7. **Open bugs by priority**: bugs not yet closed, per priority, at the end of each sprint
+
+Every card has a **Table** button that shows the numbers behind the chart. **Refresh** re-reads Jira (closed-sprint results stay cached).
+
+Data comes from Jira only. Velocity uses the board's velocity chart (`/rest/greenhopper/...`, an undocumented Jira Software endpoint that returns just the last 7 sprints); everything else is computed from issue fields and changelogs. To keep page loads fast and to keep history beyond Jira's 7-sprint window, closed-sprint results (backlog, lead/cycle time, velocity) are stored in `DELIVERY_CACHE_DIR` (default `.cache/delivery`, one JSON file per team) and reused; bug series are cheap and read live. The first load of a team scans issue history and can take up to a minute; the server warms both teams at startup. Delete the cache directory to rebuild from Jira, but note that velocity for sprints older than Jira's 7-sprint window cannot be rebuilt.
+
+The same numbers are available as JSON for scripts:
+```bash
+make run-delivery-report TEAM=PROCESSING SPRINTS=6   # all teams when TEAM is omitted
+```
+
+Metric definitions worth knowing:
+- Team scope is the board's own filter: `project = JIRA_PROJECT_KEY AND component = <team component>`. A bug tagged with several components counts for each of those teams (about a fifth of STABLETEK's bugs also carry Compliance, Issue, Faucet or Redeem).
+- "Open" means the status category is not Done, not "has no resolution": some teams close issues without setting a resolution. For issues closed that way, the close date is the time they entered their current status, read from the changelog once and remembered in the cache.
+- Sprint windows do not overlap: a sprint's events start at the later of its start and the previous sprint's close, and end at its close.
+- Fixed bugs, lead time and cycle time count every resolution (Done, Duplicate, Won't Fix, ...) unless `DELIVERY_COMPLETED_RESOLUTIONS` narrows it. Checked against Delivery Central for PROCESSING: fixed bugs match exactly, logged bugs are within 1 to 2, lead time is close in most months; its cycle time is about half of ours because it appears to measure to an earlier status (details in `specs/012-delivery-dashboard/plan.md`).
+- Priorities and story points are read as they are now, not as they were at the time.
+
 ### MCP Server (for LLM clients)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server over stdio that exposes the same Jira data as typed JSON tools, so Claude Code, Claude Desktop, Codemie and other MCP clients can answer sprint/label questions directly.
@@ -282,12 +317,14 @@ go-word-create/
 │   ├── get-month-issues-from-jira/    # Month issues fetcher
 │   ├── get-sprint-label-report/       # Sprint label report
 │   ├── fill-sprint-chart-xlsx/        # Fills the Excel chart workbook
-│   ├── web-sprint-labels-report/      # Web dashboard server
+│   ├── web-sprint-labels-report/      # Web dashboard server (labels and delivery pages)
+│   ├── get-delivery-report/           # Delivery metrics as JSON
 │   └── mcp-jira-reports/              # MCP server (stdio) for LLM clients
 ├── internal/
 │   ├── chartfill/           # Excel chart workbook filling (CLI and MCP)
 │   ├── config/              # Configuration loading from .env
 │   ├── dashboard/           # Web dashboard HTTP handlers and embedded SPA
+│   ├── deliverystats/       # Delivery metrics: velocity, backlog, lead/cycle time, bug trends, cache
 │   ├── jiraservice/         # Jira API client and issue fetching
 │   ├── labelreport/         # Label aggregation logic
 │   ├── mcpserver/           # MCP tool definitions and handlers
@@ -409,6 +446,16 @@ Tables in generated documents use:
 ### Dashboard sprint list is empty
 - Verify the board name in `TEAMS` matches the Jira board display name exactly
 - The board must have at least one active or closed sprint; future-only boards show no buttons
+
+### Delivery dashboard: a chart says "Could not compute this chart"
+- The message names the team and the Jira error; the other charts are unaffected
+- Velocity and commitment need the Jira Software velocity chart (`/rest/greenhopper/...`); if that endpoint is blocked, previously stored velocity is used when available
+
+### Delivery dashboard: velocity is empty for older sprints
+- Jira's velocity chart only returns the last 7 sprints. Older sprints are filled in once they have been seen, so run the dashboard regularly (or keep `DELIVERY_CACHE_DIR`) to build history
+
+### Delivery dashboard: first load is slow
+- The first load of a team scans issue changelogs (up to about a minute for large teams). Results for closed sprints are cached in `DELIVERY_CACHE_DIR`; the next closed sprint triggers one more scan
 
 ### Label button click has no effect
 - Check the browser console and server logs for error details

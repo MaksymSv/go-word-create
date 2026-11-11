@@ -37,7 +37,8 @@ func main() {
 	}
 
 	handler := dashboard.NewHandler(cfg, jiraSvc)
+	handler.WarmDelivery()
 	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("Starting dashboard on http://localhost%s", addr)
+	log.Printf("Starting dashboard on http://localhost%s (delivery dashboard at /delivery)", addr)
 	log.Fatal(http.ListenAndServe(addr, handler.Routes()))
 }

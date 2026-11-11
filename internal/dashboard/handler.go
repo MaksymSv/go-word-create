@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go-word-create/internal/config"
+	"go-word-create/internal/deliverystats"
 	"go-word-create/internal/jiraservice"
 	"go-word-create/internal/sprintview"
 )
@@ -18,11 +19,12 @@ import (
 //go:embed web
 var webFiles embed.FS
 
-// DashboardHandler serves the sprint labels web dashboard.
+// DashboardHandler serves the sprint labels web dashboard and the delivery dashboard.
 type DashboardHandler struct {
-	cfg   *config.Config
-	jira  *jiraservice.JiraService
-	webFS fs.FS
+	cfg      *config.Config
+	jira     *jiraservice.JiraService
+	delivery *deliverystats.Service
+	webFS    fs.FS
 }
 
 // NewHandler creates a DashboardHandler with a sub-FS rooted at "web/".
@@ -31,7 +33,7 @@ func NewHandler(cfg *config.Config, jira *jiraservice.JiraService) *DashboardHan
 	if err != nil {
 		panic(fmt.Sprintf("dashboard: failed to sub-root web embed: %v", err))
 	}
-	return &DashboardHandler{cfg: cfg, jira: jira, webFS: sub}
+	return &DashboardHandler{cfg: cfg, jira: jira, delivery: deliverystats.New(jira, deliverystats.OptionsFromConfig(cfg)), webFS: sub}
 }
 
 // Routes returns an http.Handler with all dashboard routes registered.
@@ -44,6 +46,9 @@ func (h *DashboardHandler) Routes() http.Handler {
 	mux.HandleFunc("GET /api/teams/{component}/sprints", h.getSprints)
 	mux.HandleFunc("GET /api/sprints/{sprintID}/issues", h.getSprintIssues)
 	mux.HandleFunc("POST /api/issues/{issueKey}/labels", h.updateLabel)
+	mux.HandleFunc("GET /delivery", h.serveDelivery)
+	mux.HandleFunc("GET /api/delivery/settings", h.getDeliverySettings)
+	mux.HandleFunc("GET /api/delivery/{component}", h.getDeliveryReport)
 	return loggingMiddleware(mux)
 }
 

@@ -44,3 +44,5 @@ __debug_*
 # Binary output directories
 bin/
 dist/
+# Local delivery-stats cache
+.cache/

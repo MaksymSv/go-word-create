@@ -1,4 +1,4 @@
-.PHONY: build build-month build-sprint build-sprint-label-report build-chart build-web-dashboard build-mcp run-month run-sprint run-sprint-label-report run-chart run-web-dashboard clean test fmt lint help
+.PHONY: build build-month build-sprint build-sprint-label-report build-chart build-web-dashboard build-delivery-report build-mcp run-month run-sprint run-sprint-label-report run-chart run-web-dashboard run-delivery-report clean test fmt lint help
 
 # Variables
 MONTH_CMD=./cmd/get-month-issues-from-jira
@@ -6,6 +6,7 @@ SPRINT_CMD=./cmd/get-sprint-issues-from-jira
 SPRINT_LABEL_CMD=./cmd/get-sprint-label-report
 CHART_CMD=./cmd/fill-sprint-chart-xlsx
 WEB_DASHBOARD_CMD=./cmd/web-sprint-labels-report
+DELIVERY_CMD=./cmd/get-delivery-report
 MCP_CMD=./cmd/mcp-jira-reports
 OUTPUT_DIR=./bin
 
@@ -17,13 +18,15 @@ help:
 	@echo "  make build-sprint       - Build sprint issues fetcher"
 	@echo "  make build-sprint-label-report          - Build sprint label report binary"
 	@echo "  make build-chart                        - Build the Excel chart filler (bin/fill-sprint-chart-xlsx)"
-	@echo "  make build-web-dashboard                - Build web sprint labels dashboard"
+	@echo "  make build-web-dashboard                - Build web dashboard (sprint labels at /, delivery metrics at /delivery)"
+	@echo "  make build-delivery-report              - Build the delivery metrics JSON report (bin/get-delivery-report)"
 	@echo "  make build-mcp                          - Build MCP server for LLM clients (bin/mcp-jira-reports)"
 	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
 	@echo "  make run-sprint SPRINT=\"ST26.20,PC26.20\" [FORMAT=csv] [OUTPUT=file.docx] [CSV_DIR=dir] [LOGONLY=1] - Run collecting sprint issues (FORMAT=csv writes one file per sprint)"
 	@echo "  make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] - Run sprint label report"
 	@echo "  make run-chart [FILE=book.xlsx] [OUTPUT=copy.xlsx] [DRYRUN=1] - Fill empty sprint columns of the AI Assisted Work Items Chart workbook (default proj-docs/..., updated in place)"
-	@echo "  make run-web-dashboard [PORT=8080]      - Start web sprint labels dashboard"
+	@echo "  make run-web-dashboard [PORT=8080]      - Start web dashboard (sprint labels at /, delivery metrics at /delivery)"
+	@echo "  make run-delivery-report [TEAM=STABLETEK] [SPRINTS=6] [REFRESH=1] - Print delivery metrics as JSON"
 	@echo "  make clean              - Remove build artifacts"
 	@echo "  make test               - Run tests"
 	@echo "  make fmt                - Format code"
@@ -31,7 +34,7 @@ help:
 	@echo "  make help               - Show this help message"
 
 # Build all binaries
-build: build-month build-sprint build-sprint-label-report build-chart build-web-dashboard build-mcp
+build: build-month build-sprint build-sprint-label-report build-chart build-web-dashboard build-delivery-report build-mcp
 	@echo "✓ All binaries built in $(OUTPUT_DIR)/"
 
 # Build month issues fetcher
@@ -63,6 +66,12 @@ build-web-dashboard:
 	@mkdir -p $(OUTPUT_DIR)
 	go build -o $(OUTPUT_DIR)/web-sprint-labels-report $(WEB_DASHBOARD_CMD)
 	@echo "✓ Web dashboard built: $(OUTPUT_DIR)/web-sprint-labels-report"
+
+# Build delivery metrics report
+build-delivery-report:
+	@mkdir -p $(OUTPUT_DIR)
+	go build -o $(OUTPUT_DIR)/get-delivery-report $(DELIVERY_CMD)
+	@echo "✓ Delivery report built: $(OUTPUT_DIR)/get-delivery-report"
 
 # Build MCP server (stdio)
 build-mcp:
@@ -104,6 +113,10 @@ run-sprint: build-sprint
 # Start web sprint labels dashboard
 run-web-dashboard: build-web-dashboard
 	$(OUTPUT_DIR)/web-sprint-labels-report -port=$(or $(PORT),8080)
+
+# Print delivery metrics (velocity, bugs, lead/cycle time) as JSON
+run-delivery-report: build-delivery-report
+	$(OUTPUT_DIR)/get-delivery-report$(if $(TEAM), -team="$(TEAM)")$(if $(SPRINTS), -sprints=$(SPRINTS))$(if $(REFRESH), -refresh)
 
 # Clean build artifacts
 clean:

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/delivery.css">
+  <script>
+    (function() {
+      var theme = 'light';
+      try { theme = localStorage.getItem('sprint-dashboard-theme') || 'light'; } catch (e) {}
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div id="toolbar">
+    <nav id="page-nav" aria-label="Dashboards">
+      <a href="/">AI Assisted</a>
+      <a href="/delivery" class="active" aria-current="page">Delivery</a>
+    </nav>
+    <div id="team-section" role="tablist" aria-label="Teams"></div>
+    <div id="sprint-count-section" aria-label="Number of sprints"></div>
+    <button id="refresh" class="btn-sprint" title="Re-read Jira data, bypassing the in-memory cache">↻ Refresh</button>
+    <button id="theme-toggle" title="Toggle theme">☾</button>
+  </div>
+  <div id="main-area">
+    <div id="error-banner" hidden></div>
+    <div id="meta"></div>
+    <div id="cards" role="tabpanel"></div>
+  </div>
+  <script src="/static/charts.js" defer></script>
+  <script src="/static/delivery.js" defer></script>
+</body>
+</html>

@@ -319,3 +319,27 @@ button {
 .hidden {
   display: none;
 }
+
+/* ── Page navigation (shared by both dashboards) ── */
+#page-nav {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-right: 4px;
+}
+
+#page-nav a {
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  background: var(--color-bg);
+}
+
+#page-nav a:hover { background: var(--color-btn-team); color: var(--color-text); }
+
+#page-nav a.active {
+  background: var(--color-btn-team-active-bg);
+  color: var(--color-btn-team-active-text);
+}

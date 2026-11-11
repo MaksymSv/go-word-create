@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -28,6 +30,13 @@ type Config struct {
 	Teams              []TeamEntry
 	ReportLabels       []string
 	JiraIssueTypes     []string
+
+	// Delivery dashboard settings.
+	DeliverySprintCount          int
+	DeliveryBugDays              int
+	DeliveryCacheDir             string
+	DeliveryCacheTTL             time.Duration
+	DeliveryCompletedResolutions []string
 }
 
 // Load reads the configuration from environment variables
@@ -69,9 +78,57 @@ func Load() (*Config, error) {
 		Teams:              teams,
 		ReportLabels:       reportLabels,
 		JiraIssueTypes:     jiraIssueTypes,
+
+		DeliverySprintCount:          positiveIntEnv("DELIVERY_SPRINT_COUNT", 6),
+		DeliveryBugDays:              positiveIntEnv("DELIVERY_BUG_DAYS", 30),
+		DeliveryCacheDir:             getEnvWithDefault("DELIVERY_CACHE_DIR", ".cache/delivery"),
+		DeliveryCacheTTL:             durationEnv("DELIVERY_CACHE_TTL", 15*time.Minute),
+		DeliveryCompletedResolutions: parseList(os.Getenv("DELIVERY_COMPLETED_RESOLUTIONS"), nil),
 	}
 
 	return config, nil
+}
+
+// positiveIntEnv reads a positive integer variable; invalid or missing values fall back to def.
+func positiveIntEnv(key string, def int) int {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return def
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || n <= 0 {
+		log.Printf("Warning: %s=%q is not a positive integer, using %d\n", key, raw, def)
+		return def
+	}
+	return n
+}
+
+// durationEnv reads a Go duration (e.g. "15m"); invalid or missing values fall back to def.
+func durationEnv(key string, def time.Duration) time.Duration {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return def
+	}
+	d, err := time.ParseDuration(strings.TrimSpace(raw))
+	if err != nil || d < 0 {
+		log.Printf("Warning: %s=%q is not a valid duration, using %s\n", key, raw, def)
+		return def
+	}
+	return d
+}
+
+// parseList splits a comma-separated value, dropping blanks; def is returned when nothing is left.
+func parseList(raw string, def []string) []string {
+	var out []string
+	for _, p := range strings.Split(raw, ",") {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	if len(out) == 0 {
+		return def
+	}
+	return out
 }
 
 func parseIssueTypes(s string) []string {
