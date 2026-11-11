@@ -1,9 +1,10 @@
-.PHONY: build build-month build-sprint build-sprint-label-report build-web-dashboard build-mcp run-month run-sprint run-sprint-label-report run-web-dashboard clean test fmt lint help
+.PHONY: build build-month build-sprint build-sprint-label-report build-chart build-web-dashboard build-mcp run-month run-sprint run-sprint-label-report run-chart run-web-dashboard clean test fmt lint help
 
 # Variables
 MONTH_CMD=./cmd/get-month-issues-from-jira
 SPRINT_CMD=./cmd/get-sprint-issues-from-jira
 SPRINT_LABEL_CMD=./cmd/get-sprint-label-report
+CHART_CMD=./cmd/fill-sprint-chart-xlsx
 WEB_DASHBOARD_CMD=./cmd/web-sprint-labels-report
 MCP_CMD=./cmd/mcp-jira-reports
 OUTPUT_DIR=./bin
@@ -15,11 +16,13 @@ help:
 	@echo "  make build-month        - Build month issues fetcher"
 	@echo "  make build-sprint       - Build sprint issues fetcher"
 	@echo "  make build-sprint-label-report          - Build sprint label report binary"
+	@echo "  make build-chart                        - Build the Excel chart filler (bin/fill-sprint-chart-xlsx)"
 	@echo "  make build-web-dashboard                - Build web sprint labels dashboard"
 	@echo "  make build-mcp                          - Build MCP server for LLM clients (bin/mcp-jira-reports)"
 	@echo "  make run-month MONTH=2025.10 [LOGONLY=1] - Run collecting month issues (LOGONLY optional)"
 	@echo "  make run-sprint SPRINT=\"ST26.20,PC26.20\" [FORMAT=csv] [OUTPUT=file.docx] [CSV_DIR=dir] [LOGONLY=1] - Run collecting sprint issues (FORMAT=csv writes one file per sprint)"
 	@echo "  make run-sprint-label-report SPRINT=\"Sprint 16\" [FORMAT=full] - Run sprint label report"
+	@echo "  make run-chart [FILE=book.xlsx] [OUTPUT=copy.xlsx] [DRYRUN=1] - Fill empty sprint columns of the AI Assisted Work Items Chart workbook (default proj-docs/..., updated in place)"
 	@echo "  make run-web-dashboard [PORT=8080]      - Start web sprint labels dashboard"
 	@echo "  make clean              - Remove build artifacts"
 	@echo "  make test               - Run tests"
@@ -28,7 +31,7 @@ help:
 	@echo "  make help               - Show this help message"
 
 # Build all binaries
-build: build-month build-sprint build-sprint-label-report build-web-dashboard build-mcp
+build: build-month build-sprint build-sprint-label-report build-chart build-web-dashboard build-mcp
 	@echo "✓ All binaries built in $(OUTPUT_DIR)/"
 
 # Build month issues fetcher
@@ -48,6 +51,12 @@ build-sprint-label-report:
 	@mkdir -p $(OUTPUT_DIR)
 	go build -o $(OUTPUT_DIR)/get-sprint-label-report $(SPRINT_LABEL_CMD)
 	@echo "✓ Sprint label report built: $(OUTPUT_DIR)/get-sprint-label-report"
+
+# Build Excel chart filler
+build-chart:
+	@mkdir -p $(OUTPUT_DIR)
+	go build -o $(OUTPUT_DIR)/fill-sprint-chart-xlsx $(CHART_CMD)
+	@echo "✓ Chart filler built: $(OUTPUT_DIR)/fill-sprint-chart-xlsx"
 
 # Build web sprint labels dashboard
 build-web-dashboard:
@@ -69,6 +78,10 @@ run-sprint-label-report: build-sprint-label-report
 		exit 1; \
 	fi
 	$(OUTPUT_DIR)/get-sprint-label-report -sprint="$(SPRINT)"$(if $(FORMAT), -format="$(FORMAT)")
+
+# Fill the Excel chart workbook with sprint label percentages
+run-chart: build-chart
+	$(OUTPUT_DIR)/fill-sprint-chart-xlsx$(if $(FILE), -file="$(FILE)")$(if $(OUTPUT), -output="$(OUTPUT)")$(if $(DRYRUN), -dry-run)
 
 # Run month issues fetcher
 run-month: build-month

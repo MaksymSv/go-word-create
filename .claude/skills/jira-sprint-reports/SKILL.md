@@ -22,7 +22,8 @@ This repo reads Jira (project, teams, boards and report labels come from `.env`)
 | Issues of one sprint, optionally by status, with per-label counts | `get_sprint_issues(sprint_id, statuses?)` |
 | Issue table (type, key, summary, epic, SP, status) for one or more sprints by name; CSV on request | `sprint_issues(sprints[], team?, statuses?, format?)` |
 | Label usage % for one or more sprints, by component | `sprint_label_report(sprints[], team?)` |
-| What was In Progress during a month; what closed | `month_issues(month "YYYY.MM", team?)` |
+| What was In Progress during a month; what closed | `month_issues(month "YYYY.MM", team?, format?)` |
+| Fill the empty sprint columns of the AI Assisted Work Items Chart workbook | `fill_sprint_chart(file?, write?)` |
 | Add or remove a tracked label on an issue | `set_issue_label(issue_key, label, action, confirm)` |
 
 ## Workflows
@@ -33,7 +34,7 @@ This repo reads Jira (project, teams, boards and report labels come from `.env`)
 
 **Sprint issue table / CSV.** Call `sprint_issues` with the exact sprint name(s); it mirrors `get-sprint-issues -sprint="A,B"`. For a CSV, pass `format="csv"`: each sprint comes back with `csv` text and a suggested `fileName`. The server cannot write files, so show the CSV or save it yourself under that name.
 
-**Month report.** `month_issues("2025.10")`. "Closed" means current status is exactly `Closed`. Everything else touched during the month is "Open". Issues qualify through the changelog (they were In Progress at some point in the month), not by sprint.
+**Month report.** `month_issues("2025.10")`. "Closed" means current status is exactly `Closed`. Everything else touched during the month is "Open". Issues qualify through the changelog (they were In Progress at some point in the month), not by sprint. The default `format="json"` equals `make run-month LOGONLY=1` (console output). `format="docx"` equals `make run-month`: the result adds `docx` (base64 of the Word report) and `fileName` (`<DEFAULT_OUTPUT_FILE> - YYYY-MM.docx`). The server cannot write files, so decode the base64 and save it under that name yourself.
 
 **Tagging issues.** Follow the write protocol below.
 
@@ -57,11 +58,14 @@ This repo reads Jira (project, teams, boards and report labels come from `.env`)
 
 Only labels in `configuredLabels` are accepted. A generic "go ahead" earlier in the conversation does not count as approval of a specific change.
 
+**Chart workbook.** `fill_sprint_chart()` finds sprint columns with headers but empty cells in `proj-docs/AI Assisted Work Items Chart.xlsx` (row 1 sprint `S26.20` + row 2 prefix `ST`/`PC` gives sprint `ST26.20`/`PC26.20`, components STABLETEK/PROCESSING) and calculates the label-report percentages. It also widens the chart's series ranges to the last header column (`chartRanges`), so new columns beyond the current range are plotted. Call it without `write` first and show the user `filled`/`skipped`/`chartRanges`; only call again with `write=true` after they asked to update the file. Without `write` nothing is saved: the `xlsx` base64 can be decoded and saved by the caller.
+
 ## CLI fallback (MCP server not connected)
 
 Run from the repo root so `.env` resolves.
 
 - Label report: `make run-sprint-label-report SPRINT="Sprint 16" FORMAT=full` (several sprints: `SPRINT="Sprint 16,Sprint 17"`). `FORMAT=short` omits issue rows.
+- Chart workbook: `make run-chart DRYRUN=1` to preview, `make run-chart` to update `proj-docs/AI Assisted Work Items Chart.xlsx` in place.
 - Month report: `make run-month MONTH=2025.10 LOGONLY=1`. Always pass `LOGONLY=1`. Without it the command writes a `.docx` file instead of printing.
 - The CLI prints text tables. See [references/cli-output.md](references/cli-output.md) for the column layouts.
 - Live MCP build: `make build-mcp` produces `bin/mcp-jira-reports`, which `.mcp.json` points to.

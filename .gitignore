@@ -17,8 +17,10 @@ vendor/
 # Go workspace file
 go.work
 
-# Generated Word documents
+# Generated documents
 *.docx
+*.csv
+*.xlsx
 
 # IDE specific files
 .idea/
@@ -42,8 +44,3 @@ __debug_*
 # Binary output directories
 bin/
 dist/
-
-# Generated Word documents
-*.docx
-
-*.csv

@@ -2,6 +2,7 @@ package word
 
 import (
 	"bytes"
+	"io"
 	"log"
 
 	"github.com/carmel/gooxml/document"
@@ -55,6 +56,11 @@ func (d *Doc) SaveDocumentToFile(outputFile *string) error {
 		return err
 	}
 	return nil
+}
+
+// Write serializes the document to w and returns any error instead of exiting.
+func (d *Doc) Write(w io.Writer) error {
+	return d.WordDocument.Save(w)
 }
 
 // SaveDocument saves the Word document to a buffer

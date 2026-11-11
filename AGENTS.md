@@ -11,6 +11,7 @@ Guidance for AI coding agents working in this repository. Human-oriented docs li
 | CLI | `get-month-issues` | `cmd/get-month-issues-from-jira` | Issues "In Progress" during a month, per team, to Word |
 | CLI | `get-sprint-issues` | `cmd/get-sprint-issues-from-jira` | Issues of one or more sprints to Word (`-format docx`) or CSV (`-format csv`, one file per sprint) |
 | CLI | `get-sprint-label-report` | `cmd/get-sprint-label-report` | Label/AI-usage report across all teams (`-format short\|full`) |
+| CLI | `fill-sprint-chart-xlsx` | `cmd/fill-sprint-chart-xlsx` | Fills the empty sprint columns of `proj-docs/AI Assisted Work Items Chart.xlsx` with label-report percentages (`-file`, `-output`, `-dry-run`) |
 | HTTP | `web-sprint-labels-report` | `cmd/web-sprint-labels-report` | Browser dashboard that also writes labels back to Jira |
 | MCP (stdio) | `mcp-jira-reports` | `cmd/mcp-jira-reports` | Typed JSON tools for LLM clients; registered in `.mcp.json` |
 
@@ -26,6 +27,7 @@ make lint                       # golangci-lint (auto-installs if missing)
 make run-sprint SPRINT="ST26.20,PC26.20" [FORMAT=csv] [CSV_DIR=dir] [LOGONLY=1]
 make run-month MONTH=2025.10 [LOGONLY=1]
 make run-sprint-label-report SPRINT="Sprint 16" [FORMAT=full]
+make run-chart [FILE=book.xlsx] [OUTPUT=copy.xlsx] [DRYRUN=1]
 make run-web-dashboard [PORT=8080]
 ```
 
@@ -40,8 +42,10 @@ internal/
   jiraservice/          Jira client (go-jira): boards, sprints, issues, changelog, label update
   sprintview/           Per-sprint issue view + active report labels (shared by dashboard and MCP)
   labelreport/          Label aggregation per Jira component
+  chartfill/            Fills the Excel chart workbook and widens its chart ranges to new columns (zip-level edit, no xlsx library; shared by CLI and MCP)
   issuecsv/             CSV writer and <sprint>_<YYYY-MM-DD>.csv file naming
   word/                 Word table/document generation (gooxml)
+  monthreport/          Month report: Closed/Open split and Word document (shared by CLI and MCP)
   dashboard/            HTTP handlers; embedded SPA in internal/dashboard/web/ (vanilla JS, no build step)
   mcpserver/            MCP tool definitions, handlers, report shaping
   server/               Leftover sample .docx handler; not wired into any cmd
@@ -65,7 +69,7 @@ Known doc drift: `.env.example` omits `REPORT_LABELS` and `ISSUE_TYPES`, and the
 ## Rules that are easy to break
 
 - **Never read, print, or commit `.env`.** It holds the Jira API token. Use the `list_teams` MCP tool to inspect configuration. `.env`, `bin/`, `*.docx` and `*.csv` are gitignored; keep it that way.
-- **stdout belongs to the protocol in the MCP server.** All logging there goes to stderr. The MCP server never writes files; CSV is returned as text.
+- **stdout belongs to the protocol in the MCP server.** All logging there goes to stderr. The MCP server never writes files, with one opt-in exception: `fill_sprint_chart` with `write=true` saves the workbook inside the working directory (without it the workbook is returned as base64). CSV is returned as text, and the month Word report (`month_issues` with `format=docx`) as base64 plus a suggested file name.
 - **Jira writes are guarded.** `set_issue_label` must be called with `confirm=false` first, shown to the user, and only repeated with `confirm=true` after explicit approval. The dashboard `POST /api/issues/{key}/labels` only accepts labels from `REPORT_LABELS`.
 - **Sprint names are exact and case-sensitive.** Multiple sprints are comma-separated and parsed by `jiraservice.ParseSprintNames`.
 - **Debug mode:** binaries that write a file take `-debug` (or `LOGONLY=1` through make) to print human-readable output instead; for the dashboard and MCP server `-debug` means verbose stderr logging. `get-sprint-label-report` already prints to stdout and has no `-debug`.
@@ -77,7 +81,7 @@ Known doc drift: `.env.example` omits `REPORT_LABELS` and `ISSUE_TYPES`, and the
 
 ## Testing
 
-Tests exist for `issuecsv`, `jiraservice`, `mcpserver` (using a fake implementing the `mcpserver.Jira` interface) and `sprintview` (using `sprintview.IssueSource`). `config`, `dashboard`, `labelreport`, `word` and all `cmd/` packages have none. Prefer small interfaces plus fakes over a live Jira; tests must not need network or credentials.
+Tests exist for `chartfill`, `issuecsv`, `jiraservice`, `mcpserver` (using a fake implementing the `mcpserver.Jira` interface) and `sprintview` (using `sprintview.IssueSource`). `config`, `dashboard`, `labelreport`, `word` and all `cmd/` packages have none. Prefer small interfaces plus fakes over a live Jira; tests must not need network or credentials.
 
 ## Workflow
 

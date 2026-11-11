@@ -1,7 +1,10 @@
 package mcpserver
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -231,6 +234,52 @@ func TestMonthIssuesSplit(t *testing.T) {
 	}
 }
 
+func TestMonthIssuesFormats(t *testing.T) {
+	f := &fakeJira{monthIssues: map[string][]jiraservice.Issue{
+		"Alpha": {{Key: "PRJ-1", Summary: "Shipped", Status: "Closed", StoryPoints: 3}, {Key: "PRJ-2", Summary: "Pending", Status: "In Progress"}},
+	}}
+	h := newHandler(f)
+	h.cfg.OutputFile = "EPAM-delivered-scope.docx"
+
+	_, js, err := h.monthIssues(context.Background(), nil, monthIssuesIn{Month: "2025.10"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if js.DOCX != "" || js.FileName != "" {
+		t.Errorf("json format must not return a document: %q %q", js.FileName, js.DOCX)
+	}
+
+	_, dx, err := h.monthIssues(context.Background(), nil, monthIssuesIn{Month: "2025.10", Format: " DOCX "})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dx.FileName != "EPAM-delivered-scope - 2025-10.docx" {
+		t.Errorf("fileName = %q", dx.FileName)
+	}
+	if len(dx.Teams) != len(js.Teams) || dx.Teams[0].ClosedCount != 1 || dx.Teams[0].OpenCount != 1 {
+		t.Errorf("docx format must still return the issue rows: %+v", dx.Teams)
+	}
+	raw, err := base64.StdEncoding.DecodeString(dx.DOCX)
+	if err != nil {
+		t.Fatalf("docx is not valid base64: %v", err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
+	if err != nil {
+		t.Fatalf("decoded docx is not a zip: %v", err)
+	}
+	found := false
+	for _, zf := range zr.File {
+		found = found || zf.Name == "word/document.xml"
+	}
+	if !found {
+		t.Error("docx has no word/document.xml")
+	}
+
+	if _, _, err := h.monthIssues(context.Background(), nil, monthIssuesIn{Month: "2025.10", Format: "pdf"}); err == nil || !strings.Contains(err.Error(), "pdf") {
+		t.Errorf("expected error naming the bad format, got %v", err)
+	}
+}
+
 func TestListSprintsDefaultLimit(t *testing.T) {
 	var sprints []jira.Sprint
 	for i := 1; i <= 8; i++ {
@@ -390,13 +439,16 @@ func TestServerEndToEnd(t *testing.T) {
 	for _, tl := range tools.Tools {
 		got[tl.Name] = tl
 	}
-	for _, name := range []string{"list_teams", "list_sprints", "get_sprint_issues", "sprint_issues", "sprint_label_report", "month_issues", "set_issue_label"} {
+	for _, name := range []string{"list_teams", "list_sprints", "get_sprint_issues", "sprint_issues", "sprint_label_report", "month_issues", "fill_sprint_chart", "set_issue_label"} {
 		if got[name] == nil {
 			t.Errorf("tool %q not registered", name)
 		}
 	}
 	if w := got["set_issue_label"]; w != nil && w.Annotations.ReadOnlyHint {
 		t.Error("set_issue_label must not be read-only")
+	}
+	if w := got["fill_sprint_chart"]; w != nil && w.Annotations.ReadOnlyHint {
+		t.Error("fill_sprint_chart must not be read-only")
 	}
 	if r := got["get_sprint_issues"]; r != nil && !r.Annotations.ReadOnlyHint {
 		t.Error("get_sprint_issues must be read-only")

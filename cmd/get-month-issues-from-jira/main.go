@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"time"
 
 	"go-word-create/internal/config"
 	"go-word-create/internal/jiraservice"
-	"go-word-create/internal/word"
+	"go-word-create/internal/monthreport"
 )
 
 // truncate cuts a string if it's longer than maxLen and adds "..." at the end
@@ -19,12 +18,6 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-3] + "..."
-}
-
-// TeamIssues groups closed and open issues for a specific team/component.
-type TeamIssues struct {
-	Closed []jiraservice.Issue
-	Open   []jiraservice.Issue
 }
 
 func main() {
@@ -64,7 +57,7 @@ func main() {
 	}
 
 	// For each team (component) configured in TEAMS, fetch and split issues.
-	teamIssues := make(map[string]TeamIssues)
+	teams := make([]monthreport.TeamIssues, 0, len(cfg.Teams))
 	totalIssuesCount := 0
 
 	for _, team := range cfg.Teams {
@@ -76,66 +69,30 @@ func main() {
 		}
 
 		totalIssuesCount += len(issuesForTeam)
-
-		var closedForTeam []jiraservice.Issue
-		var openForTeam []jiraservice.Issue
-
-		for _, issue := range issuesForTeam {
-			if issue.Status == "Closed" {
-				closedForTeam = append(closedForTeam, issue)
-			} else {
-				openForTeam = append(openForTeam, issue)
-			}
-		}
-
-		teamIssues[team.ComponentName] = TeamIssues{
-			Closed: closedForTeam,
-			Open:   openForTeam,
-		}
+		teams = append(teams, monthreport.Split(team.ComponentName, issuesForTeam))
 	}
 
 	if *debugMode {
 		// Print debug information grouped by team
 		log.Printf("Found %d issues in 'In Progress' during %s across %d teams\n", totalIssuesCount, *month, len(cfg.Teams))
 
-		for _, team := range cfg.Teams {
-			ti, ok := teamIssues[team.ComponentName]
-			if !ok {
-				continue
-			}
-
-			logIssuesTable(fmt.Sprintf("\nClosed Issues for team %s (%d):", team.ComponentName, len(ti.Closed)), ti.Closed)
-			logIssuesTable(fmt.Sprintf("\nOpen Issues for team %s (%d):", team.ComponentName, len(ti.Open)), ti.Open)
+		for _, ti := range teams {
+			logIssuesTable(fmt.Sprintf("\nClosed Issues for team %s (%d):", ti.Component, len(ti.Closed)), ti.Closed)
+			logIssuesTable(fmt.Sprintf("\nOpen Issues for team %s (%d):", ti.Component, len(ti.Open)), ti.Open)
 		}
 
 		log.Printf("\nTotal issues across all teams: %d\n", totalIssuesCount)
-	} else {
-		// Create Word document, grouped by team
-		doc := word.NewDocument()
-
-		for _, team := range cfg.Teams {
-			ti, ok := teamIssues[team.ComponentName]
-			if !ok {
-				continue
-			}
-
-			addTableToDocument(doc, fmt.Sprintf("Closed Issues During %s (%s)", monthStart.Format("January 2006"), team.ComponentName), ti.Closed)
-			addTableToDocument(doc, fmt.Sprintf("Issues were in work but not Closed during %s (%s)", monthStart.Format("January 2006"), team.ComponentName), ti.Open)
-		}
-
-		// output file has format some_file.docx. Insert formatted date "yyyy-mm" before .docx
-		if outputFile != nil {
-			*outputFile = fmt.Sprintf("%s - %s.docx", (*outputFile)[:len(*outputFile)-5], monthStart.Format("2006-01"))
-		}
-
-		// Save the document
-		err = doc.SaveDocumentToFile(outputFile)
-		if err != nil {
-			log.Fatalf("Failed to save document: %v", err)
-		}
-
-		log.Printf("Created document '%s' with %d issues across %d teams\n", *outputFile, totalIssuesCount, len(cfg.Teams))
+		return
 	}
+
+	// Create Word document, grouped by team, and save it as "<name> - YYYY-MM.docx"
+	doc := monthreport.BuildDocument(monthStart, teams)
+	fileName := monthreport.FileName(*outputFile, monthStart)
+	if err := doc.SaveDocumentToFile(&fileName); err != nil {
+		log.Fatalf("Failed to save document: %v", err)
+	}
+
+	log.Printf("Created document '%s' with %d issues across %d teams\n", fileName, totalIssuesCount, len(cfg.Teams))
 }
 
 func logIssuesTable(header string, lines []jiraservice.Issue) {
@@ -143,24 +100,5 @@ func logIssuesTable(header string, lines []jiraservice.Issue) {
 	for _, issue := range lines {
 		fmt.Printf("%-8s|%-12s|%-80s|%-40s|%.1f|%-12s\n",
 			issue.Type, issue.Key, truncate(issue.Summary, 80), truncate(issue.Epic, 40), issue.StoryPoints, issue.Status)
-	}
-}
-
-func addTableToDocument(doc *word.Doc, headingText string, tableContent []jiraservice.Issue) {
-	doc.AddHeading(1, headingText)
-
-	closedIssuesTable := word.NewTable(&doc.WordDocument, word.DefaultConfig())
-	closedIssuesTable.AddHeaderRow()
-
-	// Add issue rows
-	for _, issue := range tableContent {
-		data := []string{
-			issue.Type,
-			issue.Key,
-			issue.Summary,
-			issue.Epic,
-			strconv.FormatFloat(issue.StoryPoints, 'f', 1, 64),
-		}
-		closedIssuesTable.AddDataRow(data)
 	}
 }

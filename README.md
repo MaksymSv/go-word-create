@@ -96,6 +96,9 @@ make run-month MONTH=2025.10 LOGONLY=1    # Print to console only (debug mode)
 make run-sprint-label-report SPRINT="Sprint 16"
 make run-sprint-label-report SPRINT="Sprint 16" FORMAT=full
 make run-sprint-label-report SPRINT="Sprint 16,Sprint17"
+make run-chart                            # Fill empty sprint columns of proj-docs/AI Assisted Work Items Chart.xlsx
+make run-chart DRYRUN=1                   # Show what would be filled, write nothing
+make run-chart FILE=book.xlsx OUTPUT=copy.xlsx
 make run-web-dashboard                    # Start dashboard on port 8080
 make run-web-dashboard PORT=9090          # Start dashboard on custom port
 
@@ -114,6 +117,9 @@ go build -o bin/get-sprint-issues ./cmd/get-sprint-issues-from-jira
 
 # Build sprint label report
 go build -o bin/get-sprint-label-report ./cmd/get-sprint-label-report
+
+# Build Excel chart filler
+go build -o bin/fill-sprint-chart-xlsx ./cmd/fill-sprint-chart-xlsx
 
 # Build web dashboard
 go build -o bin/web-sprint-labels-report ./cmd/web-sprint-labels-report
@@ -166,6 +172,19 @@ Uses the board name from the first team entry in `TEAMS`.
 - `-sprint="Sprint Name"` (required): Sprint name to fetch issues from
 - `-output="file.docx"` (optional): Output file name (default: from .env)
 - `-debug`: Print issues to console instead of generating Word document
+
+### Fill the AI Assisted Work Items Chart workbook
+
+Fills `proj-docs/AI Assisted Work Items Chart.xlsx` with the numbers of the sprint label report:
+```bash
+./bin/fill-sprint-chart-xlsx            # updates the workbook in place
+./bin/fill-sprint-chart-xlsx -dry-run   # show the values without writing
+```
+- Columns: row 1 holds the sprint (e.g. `S26.20`), row 2 the team prefix (`ST` = STABLETEK component, `PC` = PROCESSING). The Jira sprint name is prefix + number, e.g. `ST26.20`.
+- Rows: found through the `jira label` column (B) and the row title (`WI count` vs `SP`); rows with an empty label whose title starts with `total` get the share of issues/story points that have any tracked label.
+- Chart: series ranges are widened to the last header column (so columns added beyond `AD` are plotted) and the cached chart values are refreshed.
+- Only empty cells under existing headers are filled, values are whole percentages. Sprints missing in Jira are skipped and reported.
+- Flags: `-file` (default `proj-docs/AI Assisted Work Items Chart.xlsx`), `-output` (write a copy instead of updating in place), `-dry-run`.
 
 ### Get Sprint Label Report
 
@@ -228,7 +247,8 @@ make build-mcp
 | `get_sprint_issues` | Issues of a sprint by ID, optional status filter, per-label counts and story points |
 | `sprint_issues` | Issues of one or more sprints by name (same data as `get-sprint-issues`), optional team/status filters; `format=csv` also returns CSV text and a suggested `<sprint>_<date>.csv` name per sprint (the server never writes files) |
 | `sprint_label_report` | Label report by sprint name(s), grouped by component (same data as `get-sprint-label-report -format full`) |
-| `month_issues` | Issues "In Progress" during a month, Closed vs Open per team |
+| `month_issues` | Issues "In Progress" during a month, Closed vs Open per team (same data as `make run-month LOGONLY=1`), optional `team`; `format=docx` also returns the Word report as base64 plus a suggested `<DEFAULT_OUTPUT_FILE> - YYYY-MM.docx` name (same document as `make run-month`; the server never writes files) |
+| `fill_sprint_chart` | Fills the empty sprint columns of the chart workbook (same as `make run-chart`). Without `write=true` nothing is saved and the filled `.xlsx` is returned as base64; **`write=true` updates the file** in the server working directory |
 | `set_issue_label` | **Write.** Add/remove a tracked label on an issue. Without `confirm=true` it only returns a preview |
 
 #### Registration:
@@ -261,9 +281,11 @@ go-word-create/
 │   ├── get-sprint-issues-from-jira/   # Sprint issues fetcher
 │   ├── get-month-issues-from-jira/    # Month issues fetcher
 │   ├── get-sprint-label-report/       # Sprint label report
+│   ├── fill-sprint-chart-xlsx/        # Fills the Excel chart workbook
 │   ├── web-sprint-labels-report/      # Web dashboard server
 │   └── mcp-jira-reports/              # MCP server (stdio) for LLM clients
 ├── internal/
+│   ├── chartfill/           # Excel chart workbook filling (CLI and MCP)
 │   ├── config/              # Configuration loading from .env
 │   ├── dashboard/           # Web dashboard HTTP handlers and embedded SPA
 │   ├── jiraservice/         # Jira API client and issue fetching

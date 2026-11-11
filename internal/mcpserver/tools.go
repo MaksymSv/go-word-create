@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"go-word-create/internal/config"
 	"go-word-create/internal/issuecsv"
 	"go-word-create/internal/jiraservice"
+	"go-word-create/internal/monthreport"
 	"go-word-create/internal/sprintview"
 )
 
@@ -190,8 +192,9 @@ func (h *handler) sprintLabelReport(_ context.Context, _ *mcp.CallToolRequest, i
 // --- month_issues ---
 
 type monthIssuesIn struct {
-	Month string `json:"month" jsonschema:"month as YYYY.MM, e.g. 2025.10"`
-	Team  string `json:"team,omitempty" jsonschema:"restrict to one team component; omit for all teams"`
+	Month  string `json:"month" jsonschema:"month as YYYY.MM, e.g. 2025.10"`
+	Team   string `json:"team,omitempty" jsonschema:"restrict to one team component; omit for all teams"`
+	Format string `json:"format,omitempty" jsonschema:"json (default) returns issue rows, like make run-month LOGONLY=1; docx additionally returns the Word report as base64 plus a suggested file name, like make run-month"`
 }
 
 type monthIssue struct {
@@ -215,8 +218,10 @@ type monthTeam struct {
 }
 
 type monthIssuesOut struct {
-	Month string      `json:"month"`
-	Teams []monthTeam `json:"teams"`
+	Month    string      `json:"month"`
+	Teams    []monthTeam `json:"teams"`
+	FileName string      `json:"fileName,omitempty"`
+	DOCX     string      `json:"docx,omitempty" jsonschema:"base64-encoded .docx; present only for format=docx"`
 }
 
 func toMonthIssue(i jiraservice.Issue) monthIssue {
@@ -237,6 +242,14 @@ func (h *handler) monthIssues(_ context.Context, _ *mcp.CallToolRequest, in mont
 	}
 	end := start.AddDate(0, 1, 0)
 
+	format := strings.ToLower(strings.TrimSpace(in.Format))
+	if format == "" {
+		format = formatJSON
+	}
+	if format != formatJSON && format != formatDOCX {
+		return nil, monthIssuesOut{}, fmt.Errorf(`format must be "json" or "docx", got %q`, in.Format)
+	}
+
 	teams := h.cfg.Teams
 	if in.Team != "" {
 		t, err := h.findTeam(in.Team)
@@ -247,21 +260,33 @@ func (h *handler) monthIssues(_ context.Context, _ *mcp.CallToolRequest, in mont
 	}
 
 	out := monthIssuesOut{Month: in.Month, Teams: make([]monthTeam, 0, len(teams))}
+	split := make([]monthreport.TeamIssues, 0, len(teams))
 	for _, team := range teams {
 		issues, err := h.jira.GetIssuesInProgressDuringMonth(h.cfg.ProjectKey, team.ComponentName, start, end, h.cfg.JiraIssueTypes)
 		if err != nil {
 			return nil, monthIssuesOut{}, fmt.Errorf("team %q, month %s: %w", team.ComponentName, in.Month, err)
 		}
+		ti := monthreport.Split(team.ComponentName, issues)
+		split = append(split, ti)
+
 		mt := monthTeam{Component: team.ComponentName, Closed: []monthIssue{}, Open: []monthIssue{}}
-		for _, iss := range issues {
-			if iss.Status == "Closed" {
-				mt.Closed = append(mt.Closed, toMonthIssue(iss))
-			} else {
-				mt.Open = append(mt.Open, toMonthIssue(iss))
-			}
+		for _, iss := range ti.Closed {
+			mt.Closed = append(mt.Closed, toMonthIssue(iss))
+		}
+		for _, iss := range ti.Open {
+			mt.Open = append(mt.Open, toMonthIssue(iss))
 		}
 		mt.ClosedCount, mt.OpenCount = len(mt.Closed), len(mt.Open)
 		out.Teams = append(out.Teams, mt)
+	}
+
+	if format == formatDOCX {
+		doc, err := monthreport.Bytes(start, split)
+		if err != nil {
+			return nil, monthIssuesOut{}, err
+		}
+		out.DOCX = base64.StdEncoding.EncodeToString(doc)
+		out.FileName = monthreport.FileName(h.cfg.OutputFile, start)
 	}
 	return nil, out, nil
 }
@@ -321,6 +346,7 @@ func (h *handler) setIssueLabel(_ context.Context, _ *mcp.CallToolRequest, in se
 const (
 	formatJSON = "json"
 	formatCSV  = "csv"
+	formatDOCX = "docx"
 )
 
 type sprintIssuesIn struct {

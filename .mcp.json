@@ -2,7 +2,18 @@
   "mcpServers": {
     "jira-reports": {
       "command": "./bin/mcp-jira-reports",
-      "args": ["-workdir", "."]
+      "args": [
+        "-workdir",
+        "."
+      ]
+    },
+    "delivery_central": {
+      "type": "stdio",
+      "command": "codemie-mcp-proxy",
+      "args": [
+        "https://mcp.epam.com/mcp/delivery_central"
+      ],
+      "env": {}
     }
   }
 }

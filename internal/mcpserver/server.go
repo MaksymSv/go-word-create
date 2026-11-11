@@ -22,6 +22,9 @@ const instructions = `Read-only Jira reporting for sprints and AI-usage labels, 
 Typical flow: list_teams -> list_sprints(team) -> get_sprint_issues(sprint_id, statuses?).
 sprint_issues takes sprint NAMES (several allowed) and returns the issue table, optionally as CSV.
 sprint_label_report takes sprint NAMES (exact, case-sensitive) and covers every configured team.
+month_issues takes a month (YYYY.MM) and returns the issues In Progress during it; format=docx also returns the Word report as base64.
+fill_sprint_chart fills the empty sprint columns of the AI Assisted Work Items Chart workbook from the label report; without write=true
+nothing is saved and the filled workbook is only returned as base64. Set write=true only after the user asked to update the file.
 set_issue_label changes Jira data: call it first with confirm=false, show the user the preview,
 and only call it again with confirm=true after the user explicitly approves.`
 
@@ -89,9 +92,25 @@ func New(cfg *config.Config, j Jira) *mcp.Server {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "month_issues",
 		Description: "Issues that were 'In Progress' at any time during a month (from the changelog), per team, split into " +
-			"Closed (current status 'Closed') and Open.",
+			"Closed (current status 'Closed') and Open. format=json (default) returns the issue rows (same as make run-month LOGONLY=1); " +
+			"format=docx additionally returns the Word report as base64 in 'docx' with a suggested 'fileName' " +
+			"(<DEFAULT_OUTPUT_FILE> - YYYY-MM.docx, same as make run-month); the server never writes files.",
 		Annotations: readOnly,
 	}, h.monthIssues)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name: "fill_sprint_chart",
+		Description: "Fill the empty sprint columns of the 'AI Assisted Work Items Chart' .xlsx (same numbers as sprint_label_report, rounded to whole %) . " +
+			"Columns are found from the Sprint/Team header rows (e.g. S26.20 + ST -> sprint ST26.20, component STABLETEK; PC -> PROCESSING) and rows from " +
+			"the 'jira label' column; only empty cells are written. Without write=true nothing is saved: the filled workbook is returned as base64. " +
+			"WRITE: write=true updates the file in the server working directory; use it only after the user asked for it.",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    false,
+			DestructiveHint: ptr(false),
+			IdempotentHint:  true,
+			OpenWorldHint:   ptr(true),
+		},
+	}, h.fillSprintChart)
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "set_issue_label",
