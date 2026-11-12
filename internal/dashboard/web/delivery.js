@@ -1,8 +1,8 @@
 'use strict';
 
-const THEME_KEY = 'sprint-dashboard-theme';
 const SPRINTS_KEY = 'delivery-dashboard-sprints';
 const SLOW_LOAD_MS = 4000;
+const { $, store, recall, api, showError, clearError, addCard, shortSprintNames } = Dash;
 
 const state = {
   teams: [],
@@ -19,113 +19,32 @@ const PRIORITY_COLORS = {
   unprioritized: 'var(--s-neutral)', none: 'var(--s-neutral)',
 };
 
-const $ = id => document.getElementById(id);
-
-function store(key, value) {
-  try { localStorage.setItem(key, value); } catch (e) { /* storage may be unavailable */ }
-}
-function recall(key) {
-  try { return localStorage.getItem(key); } catch (e) { return null; }
-}
-
-// ── Theme ────────────────────────────────────────────────────────────────────
-
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  $('theme-toggle').textContent = theme === 'dark' ? '⚪' : '☾';
-}
-
-function initTheme() {
-  applyTheme(recall(THEME_KEY) || 'light');
-  $('theme-toggle').addEventListener('click', () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    applyTheme(next);
-    store(THEME_KEY, next);
-  });
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function showError(msg) {
-  const banner = $('error-banner');
-  banner.textContent = msg;
-  banner.removeAttribute('hidden');
-}
-function clearError() { $('error-banner').setAttribute('hidden', ''); }
-
-async function api(path) {
-  const res = await fetch(path);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
 const fmt = Charts.fmtNum;
 const dayShort = iso => new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 const dayLong = iso => new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-// "PC26.17" -> "26.17" when every sprint shares the same letter prefix (full names stay in tooltips).
-function shortSprintNames(names) {
-  const prefix = names.map(n => (n.match(/^[A-Za-z]+/) || [''])[0]);
-  return prefix[0] && prefix.every(p => p === prefix[0]) ? names.map(n => n.slice(prefix[0].length)) : names;
-}
 const withUnit = unit => v => (v === null || v === undefined ? '—' : `${fmt(v)}${unit}`);
 
-// ── Teams (tabs) ─────────────────────────────────────────────────────────────
-
-function renderTeams() {
-  const section = $('team-section');
-  section.textContent = '';
-  state.teams.forEach(team => {
-    const btn = document.createElement('button');
-    btn.className = 'btn-team';
-    btn.textContent = team.componentName;
-    btn.dataset.component = team.componentName;
-    btn.setAttribute('role', 'tab');
-    btn.addEventListener('click', () => selectTeam(team.componentName));
-    section.appendChild(btn);
-  });
-}
-
-function markActiveTeam() {
-  document.querySelectorAll('#team-section .btn-team').forEach(b => {
-    const active = b.dataset.component === state.team;
-    b.classList.toggle('active', active);
-    b.setAttribute('aria-selected', active ? 'true' : 'false');
-  });
-}
+// ── Teams and sprint count ───────────────────────────────────────────────────
 
 function selectTeam(component) {
   if (state.team === component) return;
   state.team = component;
-  markActiveTeam();
+  Dash.markActiveTeam(component);
   history.replaceState(null, '', '#' + encodeURIComponent(component));
   load(false);
 }
 
-// ── Sprint count ─────────────────────────────────────────────────────────────
-
 function renderSprintCounts() {
-  const section = $('sprint-count-section');
-  section.textContent = '';
-  const label = document.createElement('span');
-  label.textContent = 'Sprints:';
-  section.appendChild(label);
-  const options = new Set([3, 6, 9, 12, state.settings.sprintCount, state.sprints]);
-  [...options].filter(n => n >= 1 && n <= state.settings.maxSprints).sort((a, b) => a - b).forEach(n => {
-    const pill = document.createElement('button');
-    pill.className = 'pill' + (n === state.sprints ? ' active' : '');
-    pill.textContent = n;
-    pill.dataset.count = n;
-    pill.addEventListener('click', () => {
-      if (state.sprints === n) return;
+  Dash.renderSprintCounts({
+    defaultCount: state.settings.sprintCount,
+    maxSprints: state.settings.maxSprints,
+    current: state.sprints,
+    onPick: n => {
       state.sprints = n;
       store(SPRINTS_KEY, String(n));
       renderSprintCounts();
       load(false);
-    });
-    section.appendChild(pill);
+    },
   });
 }
 
@@ -298,57 +217,10 @@ function renderReport(rep) {
   });
 }
 
-function addCard(parent, errors, def) {
-  const card = document.createElement('section');
-  card.className = 'card';
-
-  const head = document.createElement('div');
-  head.className = 'card-head';
-  const titles = document.createElement('div');
-  const h2 = document.createElement('h2');
-  h2.textContent = def.title;
-  const sub = document.createElement('div');
-  sub.className = 'card-sub';
-  sub.textContent = def.sub;
-  titles.append(h2, sub);
-  head.appendChild(titles);
-  card.appendChild(head);
-
-  const body = document.createElement('div');
-  card.appendChild(body);
-  parent.appendChild(card);
-
-  if (errors[def.key]) {
-    const err = document.createElement('div');
-    err.className = 'card-error';
-    err.textContent = `Could not compute this chart: ${errors[def.key]}`;
-    body.appendChild(err);
-    return;
-  }
-
-  const spec = def.spec();
-  spec.ariaLabel = `${def.title}. ${def.sub}.`;
-  spec.title = def.title;
-  const chart = Charts.render(body, spec);
-  if (chart) {
-    const toggle = document.createElement('button');
-    toggle.className = 'card-toggle';
-    toggle.textContent = 'Table';
-    toggle.addEventListener('click', () => { toggle.textContent = chart.toggleTable() ? 'Chart' : 'Table'; });
-    head.appendChild(toggle);
-  }
-  if (def.note) {
-    const note = document.createElement('div');
-    note.className = 'card-note';
-    note.textContent = def.note;
-    card.appendChild(note);
-  }
-}
-
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 
 async function init() {
-  initTheme();
+  Dash.initTheme();
   $('refresh').addEventListener('click', () => load(true));
   try {
     const [teams, settings] = await Promise.all([api('/api/teams'), api('/api/delivery/settings')]);
@@ -360,7 +232,7 @@ async function init() {
   }
   const saved = parseInt(recall(SPRINTS_KEY), 10);
   state.sprints = saved >= 1 && saved <= state.settings.maxSprints ? saved : state.settings.sprintCount;
-  renderTeams();
+  Dash.renderTeams(state.teams, selectTeam);
   renderSprintCounts();
   if (!state.teams.length) {
     $('cards').innerHTML = '<div class="empty-state">No teams are configured (TEAMS in .env).</div>';

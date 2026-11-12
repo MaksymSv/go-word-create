@@ -37,6 +37,16 @@ type Config struct {
 	DeliveryCacheDir             string
 	DeliveryCacheTTL             time.Duration
 	DeliveryCompletedResolutions []string
+
+	// Risk / RAID scan settings.
+	RaidBlockedStatuses    []string
+	RaidBlockedLabels      []string
+	RaidCriticalPriorities []string
+	RaidAgingDays          int
+	RaidStaleDays          int
+	RaidRolloverSprints    int
+	RaidLateStartPct       int
+	RaidDriftPct           int
 }
 
 // Load reads the configuration from environment variables
@@ -84,6 +94,15 @@ func Load() (*Config, error) {
 		DeliveryCacheDir:             getEnvWithDefault("DELIVERY_CACHE_DIR", ".cache/delivery"),
 		DeliveryCacheTTL:             durationEnv("DELIVERY_CACHE_TTL", 15*time.Minute),
 		DeliveryCompletedResolutions: parseList(os.Getenv("DELIVERY_COMPLETED_RESOLUTIONS"), nil),
+
+		RaidBlockedStatuses:    parseList(os.Getenv("RAID_BLOCKED_STATUSES"), []string{"Blocked", "On Hold"}),
+		RaidBlockedLabels:      parseList(os.Getenv("RAID_BLOCKED_LABELS"), []string{"blocked"}),
+		RaidCriticalPriorities: parseList(os.Getenv("RAID_CRITICAL_PRIORITIES"), []string{"Blocker", "Critical", "Highest"}),
+		RaidAgingDays:          positiveIntEnv("RAID_AGING_DAYS", 10),
+		RaidStaleDays:          positiveIntEnv("RAID_STALE_DAYS", 5),
+		RaidRolloverSprints:    positiveIntEnv("RAID_ROLLOVER_SPRINTS", 3),
+		RaidLateStartPct:       positiveIntEnv("RAID_LATE_START_PCT", 60),
+		RaidDriftPct:           positiveIntEnv("RAID_SCOPE_DRIFT_PCT", 20),
 	}
 
 	return config, nil

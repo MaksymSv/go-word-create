@@ -113,3 +113,77 @@ func TestDeliveryReportRejectsBadRequests(t *testing.T) {
 		}
 	}
 }
+
+func TestRaidPageAndAssetsServed(t *testing.T) {
+	rec := get(t, "/raid")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /raid = %d, want 200", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{`href="/static/favicon.svg"`, `src="/static/charts.js"`, `src="/static/common.js"`, `src="/static/raid.js"`, `href="/static/raid.css"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("raid.html is missing %s", want)
+		}
+	}
+	for _, path := range []string{"/static/charts.js", "/static/common.js", "/static/raid.js", "/static/raid.css"} {
+		if rec := get(t, path); rec.Code != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200", path, rec.Code)
+		}
+	}
+}
+
+func TestAllPagesLinkToRaid(t *testing.T) {
+	for _, path := range []string{"/", "/delivery", "/raid"} {
+		if body := get(t, path).Body.String(); !strings.Contains(body, `href="/raid"`) {
+			t.Errorf("%s has no link to /raid", path)
+		}
+	}
+}
+
+func TestDeliveryPageUsesSharedHelpers(t *testing.T) {
+	body := get(t, "/delivery").Body.String()
+	if !strings.Contains(body, `src="/static/common.js"`) {
+		t.Error("delivery.html does not load common.js, which delivery.js depends on")
+	}
+	if strings.Index(body, "common.js") > strings.Index(body, "delivery.js") {
+		t.Error("common.js must load before delivery.js")
+	}
+}
+
+func TestRaidSettings(t *testing.T) {
+	cfg := &config.Config{
+		JiraURL:             "https://jira.example.com/",
+		Teams:               []config.TeamEntry{{ComponentName: "ALPHA", BoardName: "Alpha Team"}},
+		DeliverySprintCount: 4,
+		RaidDriftPct:        25,
+	}
+	rec := httptest.NewRecorder()
+	NewHandler(cfg, nil).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/raid/settings", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /api/raid/settings = %d, want 200", rec.Code)
+	}
+	var got RaidSettings
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if got.DriftPct != 25 || got.JiraURL != "https://jira.example.com" {
+		t.Errorf("settings = %+v, want driftPct 25 and the URL without a trailing slash", got)
+	}
+}
+
+func TestRaidReportRejectsBadRequests(t *testing.T) {
+	cases := []struct {
+		path string
+		want int
+	}{
+		{"/api/raid/UNKNOWN", http.StatusNotFound},
+		{"/api/raid/ALPHA?sprints=abc", http.StatusBadRequest},
+		{"/api/raid/ALPHA?sprints=0", http.StatusBadRequest},
+		{"/api/raid/ALPHA?sprints=999", http.StatusBadRequest},
+	}
+	for _, c := range cases {
+		if rec := getWithTeams(t, c.path); rec.Code != c.want {
+			t.Errorf("GET %s = %d, want %d (body %s)", c.path, rec.Code, c.want, rec.Body.String())
+		}
+	}
+}

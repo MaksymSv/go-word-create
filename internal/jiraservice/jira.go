@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira"
@@ -16,6 +17,9 @@ type JiraService struct {
 	epicField string
 	spField   string
 	url       string
+
+	boardMu sync.Mutex
+	boards  map[string]*jira.Board // board IDs never change, so lookups by name are kept
 }
 
 type Issue struct {
@@ -47,10 +51,17 @@ func NewJiraService(baseURL, username, password, epicField, spField string) (*Ji
 		epicField: epicField,
 		spField:   spField,
 		url:       baseURL,
+		boards:    map[string]*jira.Board{},
 	}, nil
 }
 
 func (s *JiraService) GetBoard(boardName string) (*jira.Board, error) {
+	s.boardMu.Lock()
+	cached, ok := s.boards[boardName]
+	s.boardMu.Unlock()
+	if ok {
+		return cached, nil
+	}
 
 	// First, find the board ID
 	boards, _, err := s.client.Board.GetAllBoards(&jira.BoardListOptions{
@@ -68,7 +79,14 @@ func (s *JiraService) GetBoard(boardName string) (*jira.Board, error) {
 	//boardID := strconv.Itoa(boards.Values[0].ID)
 	//log.Printf("Found board '%s' with ID %d", boardName, boardID)
 
-	return &boards.Values[0], nil
+	board := &boards.Values[0]
+	s.boardMu.Lock()
+	if s.boards == nil {
+		s.boards = map[string]*jira.Board{}
+	}
+	s.boards[boardName] = board
+	s.boardMu.Unlock()
+	return board, nil
 }
 
 // LoadEpics loads all Epic issues for the given project key and returns

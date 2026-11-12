@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAID Scan</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/delivery.css">
+  <link rel="stylesheet" href="/static/raid.css">
+  <script>
+    (function() {
+      var theme = 'light';
+      try { theme = localStorage.getItem('sprint-dashboard-theme') || 'light'; } catch (e) {}
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div id="toolbar">
+    <nav id="page-nav" aria-label="Dashboards">
+      <a href="/">AI Assisted</a>
+      <a href="/delivery">Delivery</a>
+      <a href="/raid" class="active" aria-current="page">RAID</a>
+    </nav>
+    <div id="team-section" role="tablist" aria-label="Teams"></div>
+    <button id="refresh" class="btn-sprint" title="Re-read Jira data, bypassing the in-memory cache">↻ Refresh</button>
+    <button id="theme-toggle" title="Toggle theme">☾</button>
+  </div>
+  <div id="main-area">
+    <div id="error-banner" hidden></div>
+    <div id="meta"></div>
+    <div id="warnings"></div>
+    <details id="rules" hidden>
+      <summary>How the signals are decided</summary>
+      <ul id="rules-list"></ul>
+    </details>
+    <div id="view-switch" role="group" aria-label="Which issues the tiles and the watchlist cover"></div>
+    <div id="tiles" role="group" aria-label="RAID summary"></div>
+    <div id="cards" role="tabpanel"></div>
+  </div>
+  <script src="/static/charts.js" defer></script>
+  <script src="/static/common.js" defer></script>
+  <script src="/static/raid.js" defer></script>
+</body>
+</html>

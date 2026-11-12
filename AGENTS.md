@@ -12,8 +12,9 @@ Guidance for AI coding agents working in this repository. Human-oriented docs li
 | CLI | `get-sprint-issues` | `cmd/get-sprint-issues-from-jira` | Issues of one or more sprints to Word (`-format docx`) or CSV (`-format csv`, one file per sprint) |
 | CLI | `get-sprint-label-report` | `cmd/get-sprint-label-report` | Label/AI-usage report across all teams (`-format short\|full`) |
 | CLI | `fill-sprint-chart-xlsx` | `cmd/fill-sprint-chart-xlsx` | Fills the empty sprint columns of `proj-docs/AI Assisted Work Items Chart.xlsx` with label-report percentages (`-file`, `-output`, `-dry-run`) |
-| HTTP | `web-sprint-labels-report` | `cmd/web-sprint-labels-report` | Browser dashboard that also writes labels back to Jira; also serves the delivery dashboard at `/delivery` |
+| HTTP | `web-sprint-labels-report` | `cmd/web-sprint-labels-report` | Browser dashboard that also writes labels back to Jira; also serves the delivery dashboard at `/delivery` and the RAID scan at `/raid` |
 | CLI | `get-delivery-report` | `cmd/get-delivery-report` | Delivery metrics (velocity, backlog, lead/cycle time, bug trends) per team as JSON (`-team`, `-sprints`, `-refresh`) |
+| CLI | `get-raid-report` | `cmd/get-raid-report` | RAID scan per team as JSON: blocked/aging/at-risk items, sprint scope drift (`-team`, `-sprints`, `-refresh`) |
 | MCP (stdio) | `mcp-jira-reports` | `cmd/mcp-jira-reports` | Typed JSON tools for LLM clients; registered in `.mcp.json` |
 
 ## Commands
@@ -29,8 +30,9 @@ make run-sprint SPRINT="ST26.20,PC26.20" [FORMAT=csv] [CSV_DIR=dir] [LOGONLY=1]
 make run-month MONTH=2025.10 [LOGONLY=1]
 make run-sprint-label-report SPRINT="Sprint 16" [FORMAT=full]
 make run-chart [FILE=book.xlsx] [OUTPUT=copy.xlsx] [DRYRUN=1]
-make run-web-dashboard [PORT=8080]       # labels at /, delivery dashboard at /delivery
+make run-web-dashboard [PORT=8080]       # labels at /, delivery at /delivery, RAID scan at /raid
 make run-delivery-report [TEAM=PROCESSING] [SPRINTS=6] [REFRESH=1]
+make run-raid-report [TEAM=PROCESSING] [SPRINTS=6] [REFRESH=1]
 ```
 
 Before finishing any change: `make fmt`, `make lint`, `make test`, `make build` must all pass (constitution gate). `go vet ./...` and `go test ./...` are clean at the time of writing.
@@ -49,10 +51,11 @@ internal/
   word/                 Word table/document generation (gooxml)
   monthreport/          Month report: Closed/Open split and Word document (shared by CLI and MCP)
   deliverystats/        Delivery metrics per team (velocity, commitment, backlog, lead/cycle, bug trends) + closed-sprint disk cache; no HTTP
+  raidscan/             RAID scan per team (blocked/aging/at-risk signals, sprint scope drift, daily trend snapshots); no HTTP
   dashboard/            HTTP handlers; embedded SPA in internal/dashboard/web/ (vanilla JS, no build step; hand-written SVG charts in charts.js)
   mcpserver/            MCP tool definitions, handlers, report shaping
   server/               Leftover sample .docx handler; not wired into any cmd
-specs/NNN-name/         Spec Kit feature specs and plans (001-012; 008 and 009 are retroactive)
+specs/NNN-name/         Spec Kit feature specs and plans (001-013; 008 and 009 are retroactive)
 .specify/               Spec Kit templates, scripts, constitution
 .claude/skills/         Project skills (speckit-*, jira-sprint-reports)
 ```
@@ -83,11 +86,12 @@ Keep `.env.example` listing every variable (the constitution requires it).
 - **Business logic goes in `internal/`**, not in `cmd/` and not in HTTP handlers.
 - **Dependencies:** use `go-jira` for Jira, `gooxml` for OOXML, `modelcontextprotocol/go-sdk` for MCP. Do not add a second library for the same job.
 - **Delivery stats are Jira-only.** The `delivery_central` MCP is not callable from Go and covers just two of the seven charts for one team, so it is only a cross-check (fixed bugs match exactly, logged bugs and lead time are close, cycle time differs; see spec 012). Closed-sprint values are cached in `DELIVERY_CACHE_DIR`; changing what a cached value means requires bumping `cacheVersion` in `internal/deliverystats/cache.go`. Sprint IDs are not chronological on every board, so order sprints by start date.
-- **Dashboard frontend is vanilla JS** embedded with `//go:embed web` and served at `/static/`; theme and the last issue list are kept in `localStorage`. There is no bundler or JS test setup, so verify UI changes in a browser (`make run-web-dashboard`).
+- **RAID scan is Jira-only too.** Sprint scope comes from the undocumented `rapid/charts/sprintreport` endpoint (summing `estimateStatistic` over issues not in `issueKeysAddedDuringSprint` reproduces the velocity chart's committed value). Closed-sprint scope is cached in `raid-<team>.json` next to the delivery cache (bump `cacheVersion` in `internal/raidscan/cache.go` when its meaning changes); the daily trend in the same file cannot be rebuilt from Jira, so do not delete it casually. `JiraService.GetBoard` caches board IDs because Jira answered bursts of board lookups with 403.
+- **Dashboard frontend is vanilla JS** embedded with `//go:embed web` and served at `/static/`; `common.js` holds the helpers shared by the delivery and RAID pages; theme and the last issue list are kept in `localStorage`. There is no bundler or JS test setup, so verify UI changes in a browser (`make run-web-dashboard`).
 
 ## Testing
 
-Tests exist for `chartfill`, `issuecsv`, `jiraservice`, `mcpserver` (using a fake implementing the `mcpserver.Jira` interface) and `sprintview` (using `sprintview.IssueSource`). `config`, `dashboard`, `labelreport`, `word` and all `cmd/` packages have none. Prefer small interfaces plus fakes over a live Jira; tests must not need network or credentials.
+Tests exist for `raidscan` (fake `raidscan.Source`), `chartfill`, `issuecsv`, `jiraservice`, `mcpserver` (using a fake implementing the `mcpserver.Jira` interface) and `sprintview` (using `sprintview.IssueSource`). `config`, `dashboard`, `labelreport`, `word` and all `cmd/` packages have none. Prefer small interfaces plus fakes over a live Jira; tests must not need network or credentials.
 
 ## Workflow
 

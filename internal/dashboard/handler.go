@@ -13,17 +13,19 @@ import (
 	"go-word-create/internal/config"
 	"go-word-create/internal/deliverystats"
 	"go-word-create/internal/jiraservice"
+	"go-word-create/internal/raidscan"
 	"go-word-create/internal/sprintview"
 )
 
 //go:embed web
 var webFiles embed.FS
 
-// DashboardHandler serves the sprint labels web dashboard and the delivery dashboard.
+// DashboardHandler serves the sprint labels web dashboard, the delivery dashboard and the RAID page.
 type DashboardHandler struct {
 	cfg      *config.Config
 	jira     *jiraservice.JiraService
 	delivery *deliverystats.Service
+	raid     *raidscan.Service
 	webFS    fs.FS
 }
 
@@ -33,7 +35,11 @@ func NewHandler(cfg *config.Config, jira *jiraservice.JiraService) *DashboardHan
 	if err != nil {
 		panic(fmt.Sprintf("dashboard: failed to sub-root web embed: %v", err))
 	}
-	return &DashboardHandler{cfg: cfg, jira: jira, delivery: deliverystats.New(jira, deliverystats.OptionsFromConfig(cfg)), webFS: sub}
+	return &DashboardHandler{
+		cfg: cfg, jira: jira, webFS: sub,
+		delivery: deliverystats.New(jira, deliverystats.OptionsFromConfig(cfg)),
+		raid:     raidscan.New(jira, raidscan.OptionsFromConfig(cfg)),
+	}
 }
 
 // Routes returns an http.Handler with all dashboard routes registered.
@@ -49,6 +55,9 @@ func (h *DashboardHandler) Routes() http.Handler {
 	mux.HandleFunc("GET /delivery", h.serveDelivery)
 	mux.HandleFunc("GET /api/delivery/settings", h.getDeliverySettings)
 	mux.HandleFunc("GET /api/delivery/{component}", h.getDeliveryReport)
+	mux.HandleFunc("GET /raid", h.serveRaid)
+	mux.HandleFunc("GET /api/raid/settings", h.getRaidSettings)
+	mux.HandleFunc("GET /api/raid/{component}", h.getRaidReport)
 	return loggingMiddleware(mux)
 }
 

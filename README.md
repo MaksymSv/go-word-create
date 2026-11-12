@@ -59,7 +59,7 @@ TEAMS=PROCESSING|"PROCESSING Team",STABLETEK|"STABLETEK Team"
 DEFAULT_OUTPUT_FILE=output.docx
 ```
 
-The delivery dashboard has its own optional `DELIVERY_*` settings; see `.env.example`.
+The delivery dashboard and the RAID scan have their own optional `DELIVERY_*` and `RAID_*` settings; see `.env.example`.
 
 ### Getting Jira API Token
 
@@ -91,6 +91,7 @@ make build-sprint
 make build-sprint-label-report
 make build-web-dashboard
 make build-delivery-report
+make build-raid-report
 make build-mcp
 
 # Run commands
@@ -105,6 +106,7 @@ make run-chart FILE=book.xlsx OUTPUT=copy.xlsx
 make run-web-dashboard                    # Start dashboard on port 8080
 make run-web-dashboard PORT=9090          # Start dashboard on custom port
 make run-delivery-report TEAM=STABLETEK SPRINTS=6   # Print delivery metrics as JSON
+make run-raid-report TEAM=STABLETEK                  # Print the RAID scan as JSON
 
 # Show all available targets
 make help
@@ -130,6 +132,9 @@ go build -o bin/web-sprint-labels-report ./cmd/web-sprint-labels-report
 
 # Build delivery metrics report
 go build -o bin/get-delivery-report ./cmd/get-delivery-report
+
+# Build RAID scan report
+go build -o bin/get-raid-report ./cmd/get-raid-report
 
 # Build MCP server
 go build -o bin/mcp-jira-reports ./cmd/mcp-jira-reports
@@ -261,6 +266,29 @@ Metric definitions worth knowing:
 - Fixed bugs, lead time and cycle time count every resolution (Done, Duplicate, Won't Fix, ...) unless `DELIVERY_COMPLETED_RESOLUTIONS` narrows it. Checked against Delivery Central for PROCESSING: fixed bugs match exactly, logged bugs are within 1 to 2, lead time is close in most months; its cycle time is about half of ours because it appears to measure to an earlier status (details in `specs/012-delivery-dashboard/plan.md`).
 - Priorities and story points are read as they are now, not as they were at the time.
 
+### Risk / RAID Scan
+
+`http://localhost:8080/raid` (linked from the toolbar of every page) scans a team's open Jira work for RAID signals, one tab per team in `TEAMS`. It reads the whole open backlog (`project` + `component`, status category not Done) with its changelog, so blocked work, dependencies and critical bugs are found outside the sprint too.
+
+- **View switch** (above the tiles): "All open work" or "Current sprint <name>". The sprint view narrows the tiles, the counts in the filter chips and the watchlist to issues in the running sprint; the sprint pulse, scope charts and the work-in-progress chart always cover what they say. The choice is remembered in the browser; the sprint option is disabled when no sprint is running.
+- **Tiles**: Risks, Assumptions, Issues and Dependencies counts, colored red when an issue has a high-severity signal, amber for other signals, green when clear (the status is also written as text). Click a tile to filter the watchlist. The fifth tile is the scope drift of the running sprint.
+- **Sprint pulse**: time elapsed vs. share of scope completed in the running sprint, with the committed/added/removed/re-estimated story points and how many items have not started.
+- **Watchlist**: issues ranked by their most severe signal, with a chip per signal (hover for the reason) and filters per signal.
+- **Charts**: work in progress by age, scope added/removed per sprint, scope drift per sprint against `RAID_SCOPE_DRIFT_PCT`, and a daily trend of flagged, blocked and aging issues. The two scope charts plot the running sprint plus the last `DELIVERY_SPRINT_COUNT` closed ones; the page has no sprint selector (the API and `get-raid-report` accept `sprints`/`-sprints`).
+
+| Category | Signals |
+|---|---|
+| Risks | aging (in progress `RAID_AGING_DAYS`+, high at twice that), stale (no update for `RAID_STALE_DAYS`), late start (still to do after `RAID_LATE_START_PCT` of the sprint), rolled over (`RAID_ROLLOVER_SPRINTS`+ sprints), overdue |
+| Assumptions | sprint work without story points (bugs excluded), in-progress work without an assignee |
+| Issues | blocked (status in `RAID_BLOCKED_STATUSES`, label in `RAID_BLOCKED_LABELS`, or flagged as an impediment), critical bug (`RAID_CRITICAL_PRIORITIES`) |
+| Dependencies | linked "is blocked by" / "depends on" issue that is not done |
+
+Scope drift comes from Jira's own sprint report (`/rest/greenhopper/...`, undocumented like the velocity chart): committed is the estimate of issues in the sprint when it started and matches the velocity chart, added and removed are changes after the start, and re-estimated is the estimate change of issues that stayed. Closed-sprint scope and the daily trend are stored in `DELIVERY_CACHE_DIR` (`raid-<team>.json`); the watchlist is read live and reused for `DELIVERY_CACHE_TTL`. Jira has no history of what was blocked on a given day, so the trend starts the day the scan first ran.
+
+```bash
+make run-raid-report TEAM=PROCESSING SPRINTS=6   # all teams when TEAM is omitted
+```
+
 ### MCP Server (for LLM clients)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server over stdio that exposes the same Jira data as typed JSON tools, so Claude Code, Claude Desktop, Codemie and other MCP clients can answer sprint/label questions directly.
@@ -319,12 +347,14 @@ go-word-create/
 │   ├── fill-sprint-chart-xlsx/        # Fills the Excel chart workbook
 │   ├── web-sprint-labels-report/      # Web dashboard server (labels and delivery pages)
 │   ├── get-delivery-report/           # Delivery metrics as JSON
+│   ├── get-raid-report/               # RAID scan as JSON
 │   └── mcp-jira-reports/              # MCP server (stdio) for LLM clients
 ├── internal/
 │   ├── chartfill/           # Excel chart workbook filling (CLI and MCP)
 │   ├── config/              # Configuration loading from .env
 │   ├── dashboard/           # Web dashboard HTTP handlers and embedded SPA
 │   ├── deliverystats/       # Delivery metrics: velocity, backlog, lead/cycle time, bug trends, cache
+│   ├── raidscan/            # RAID scan: blocked, aging and at-risk items, scope drift, daily trend
 │   ├── jiraservice/         # Jira API client and issue fetching
 │   ├── labelreport/         # Label aggregation logic
 │   ├── mcpserver/           # MCP tool definitions and handlers

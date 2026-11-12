@@ -186,17 +186,24 @@ const Charts = (() => {
         s.values.forEach((v, i) => {
           if (v === null || v === undefined) return;
           const x = cx(i) - groupW / 2 + bi * (bw + BAR_GAP);
-          const top = y(Math.max(v, 0));
-          const base = y(0);
-          const h = Math.max(0, base - top);
+          const zero = y(0);
+          const top = Math.min(zero, y(v));
+          const bottom = Math.max(zero, y(v));
+          const h = bottom - top;
           if (h > 0) {
             const r = Math.min(BAR_RADIUS, h, bw / 2);
-            svg('path', {
-              d: `M${x},${base} V${top + r} Q${x},${top} ${x + r},${top} H${x + bw - r} Q${x + bw},${top} ${x + bw},${top + r} V${base} Z`,
-              style: `fill:${s.color}`,
-            }, root);
+            // Round the free end: the top of a positive bar, the bottom of a negative one.
+            const d = v >= 0
+              ? `M${x},${bottom} V${top + r} Q${x},${top} ${x + r},${top} H${x + bw - r} Q${x + bw},${top} ${x + bw},${top + r} V${bottom} Z`
+              : `M${x},${top} V${bottom - r} Q${x},${bottom} ${x + r},${bottom} H${x + bw - r} Q${x + bw},${bottom} ${x + bw},${bottom - r} V${top} Z`;
+            svg('path', { d, style: `fill:${(s.colors && s.colors[i]) || s.color}` }, root);
           }
-          barLabels.push({ x: x + bw / 2, y: top - 4, text: labelOf(s, v) });
+          const below = v < 0;
+          barLabels.push({
+            x: x + bw / 2,
+            y: below ? bottom + (label.vertical ? textW(label.size) + 4 : label.size + 3) : top - 4,
+            text: labelOf(s, v),
+          });
         });
       });
     }
